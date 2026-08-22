@@ -726,8 +726,7 @@ UVM 环境里最容易混淆的两个词是 object 和 component。名字都像�
 
 > 来源：https://mp.weixin.qq.com/s/h9jzqyk9Hht6eoWCUG7qiQ
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 29
-> **已截图**
+> update 2026/08/22 20 : 37
 
 > “
 >
@@ -778,7 +777,7 @@ UVC 开发从简单到复杂，大致分这么几步：
 
 UVM testbench 的标准结构是一棵组件树：
 
-![](UVM_AI_assets/image-0061.png)
+![](UVM_AI_assets/image-0097.png)
 
 各层职责：
 
@@ -794,7 +793,7 @@ UVM testbench 的标准结构是一棵组件树：
 
 Agent 是 UVC 的心脏。它围绕一个特定的 pin-level 接口，聚合三个核心组件：
 
-![](UVM_AI_assets/image-0062.png)
+![](UVM_AI_assets/image-0098.png)
 
 三个组件的职责
 
@@ -814,106 +813,37 @@ Agent 有两种工作模式，通过 `uvm_active_passive_enum` 控制：
 在 `build_phase` 中根据配置条件实例化：
 
 ```
-class
-class
- my_agent
-extends
-extends
- uvm_agent;
+class my_agent extends uvm_agent;
 `uvm_component_utils(my_agent)
-`uvm_component_utils(my_agent)
+
   my_agent_config  cfg;
   my_driver        drv;
   my_sequencer     sqr;
   my_monitor       mon;
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-// 获取 config
-// 获取 config
-if
-if
- (!uvm_config_db
-#(my_agent_config)::get(this, "", "cfg", cfg))
-#(my_agent_config)::get(this, "", "cfg", cfg))
-`uvm_fatal("NOCONFIG", "my_agent_config not set")
-`uvm_fatal("NOCONFIG", "my_agent_config not set")
-// Monitor 始终创建
-// Monitor 始终创建
-    mon = my_monitor::type_id::create(
-"mon"
-"mon"
-,
-this
-this
-);
-// Driver 和 Sequencer 仅在 active 模式下创建
-// Driver 和 Sequencer 仅在 active 模式下创建
-if
-if
- (cfg
-.active
-.active
- == UVM_ACTIVE)
-begin
-begin
-      drv = my_driver::type_id::create(
-"drv"
-"drv"
-,
-this
-this
-);
-      sqr = my_sequencer::type_id::create(
-"sqr"
-"sqr"
-,
-this
-this
-);
-end
-end
+
+functionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+
+    // 获取 config
+    if (!uvm_config_db#(my_agent_config)::get(this, "", "cfg", cfg))
+      `uvm_fatal("NOCONFIG", "my_agent_config not set")
+
+    // Monitor 始终创建
+    mon = my_monitor::type_id::create("mon", this);
+
+    // Driver 和 Sequencer 仅在 active 模式下创建
+    if (cfg.active == UVM_ACTIVE) begin
+      drv = my_driver::type_id::create("drv", this);
+      sqr = my_sequencer::type_id::create("sqr", this);
+    end
 endfunction
+
+functionvoid connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (cfg.active == UVM_ACTIVE) begin
+      drv.seq_item_port.connect(sqr.seq_item_export);
+    end
 endfunction
-function
-function
-void
-void
- connect_phase(uvm_phase phase);
-super
-super
-.connect_phase
-.connect_phase
-(phase);
-if
-if
- (cfg
-.active
-.active
- == UVM_ACTIVE)
-begin
-begin
-      drv
-.seq_item_port
-.seq_item_port
-.connect
-.connect
-(sqr
-.seq_item_export
-.seq_item_export
-);
-end
-end
-endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -926,33 +856,13 @@ endclass
 Cookbook 推荐用独立的 **Config Object** 管理 agent 配置，而不是通过 `uvm_config_db` 散落各种裸类型。
 
 ```
-class
-class
- my_agent_config
-extends
-extends
- uvm_object;
-`uvm_object_utils(my_agent_config)
-`uvm_object_utils(my_agent_config)
+class my_agent_config extends uvm_object;
+  `uvm_object_utils(my_agent_config)
+
   uvm_active_passive_enum  active = UVM_ACTIVE;
-bit
-bit
-                      has_functional_coverage =
-1
-1
-;
-bit
-bit
-                      has_scoreboard =
-1
-1
-;
-virtual
-virtual
- my_interface     vif;
-//vif也放在cfg中，满足部分vseq监控intf的需求
-//vif也放在cfg中，满足部分vseq监控intf的需求
-endclass
+  bit                      has_functional_coverage = 1;
+  bit                      has_scoreboard = 1;
+  virtual my_interface     vif; //vif也放在cfg中，满足部分vseq监控intf的需求
 endclass
 ```
 
@@ -973,41 +883,15 @@ env_config
 在 test 中构建 config 对象，通过 `uvm_config_db` 传入 env：
 
 ```
-class
-class
- my_test
-extends
-extends
- uvm_test;
+class my_test extends uvm_test;
   my_env_config  env_cfg;
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-    env_cfg = my_env_config::type_id::create(
-"env_cfg"
-"env_cfg"
-);
-    env_cfg
-.agent_apb_cfg
-.agent_apb_cfg
-.active
-.active
- = UVM_ACTIVE;
-    env_cfg
-.agent_ahb_cfg
-.agent_ahb_cfg
-.active
-.active
- = UVM_PASSIVE;
-    uvm_config_db
-#(my_env_config)::set(this, "env", "env_cfg", env_cfg)
-#(my_env_config)::set(this, "env", "env_cfg", env_cfg)
-;
-endfunction
-endfunction
-endclass
+
+  function void build_phase(uvm_phase phase);
+    env_cfg = my_env_config::type_id::create("env_cfg");
+    env_cfg.agent_apb_cfg.active = UVM_ACTIVE;
+    env_cfg.agent_ahb_cfg.active = UVM_PASSIVE;
+    uvm_config_db#(my_env_config)::set(this, "env", "env_cfg", env_cfg);
+  endfunction
 endclass
 ```
 
@@ -1022,53 +906,17 @@ UVM Cookbook 总结了几条 VIP 开发的关键原则，贯穿整个系列：
 Agent 类放在 verilog package 中，实现编译隔离和复用：
 
 ```
-package
-package
- apb_agent_pkg;
+package apb_agent_pkg;
 `include "uvm_macros.svh"
-`
-include
-include
- "uvm_macros.svh"
-import
-import
- uvm_pkg::*;
+import uvm_pkg::*;
+
 `include "apb_transaction.sv"
-`
-include
-include
- "apb_transaction.sv"
 `include "apb_config.sv"
-`
-include
-include
- "apb_config.sv"
 `include "apb_driver.sv"
-`
-include
-include
- "apb_driver.sv"
 `include "apb_monitor.sv"
-`
-include
-include
- "apb_monitor.sv"
 `include "apb_sequencer.sv"
-`
-include
-include
- "apb_sequencer.sv"
 `include "apb_agent.sv"
-`
-include
-include
- "apb_agent.sv"
 `include "apb_sequences.sv"
-`
-include
-include
- "apb_sequences.sv"
-endpackage
 endpackage
 ```
 
@@ -1079,25 +927,14 @@ endpackage
 所有组件必须用 `uvm_component_utils` 注册到 factory，这样 test 才能在运行时通过 factory override 替换组件类型：
 
 ```
-class
-class
- my_driver
-extends
-extends
- uvm_driver
-#(my_transaction)
-#(my_transaction)
-;
-`uvm_component_utils(my_driver)
-`uvm_component_utils(my_driver)
-endclass
+class my_driver extends uvm_driver #(my_transaction);
+  `uvm_component_utils(my_driver)
 endclass
 ```
 
 注册后，test 可以通过 factory override 在不修改 agent 代码的情况下替换 driver：
 
 ```
-// 在 test 中：把所有 my_driver 替换为 my_error_inject_driver
 // 在 test 中：把所有 my_driver 替换为 my_error_inject_driver
 my_driver::type_id::set_type_override(my_error_inject_driver::get_type());
 ```
@@ -1120,7 +957,7 @@ my_driver::type_id::set_type_override(my_error_inject_driver::get_type());
 
 **"Russian Doll" 嵌套复用**是 Cookbook 推荐的分层策略。
 
-![](UVM_AI_assets/image-0063.png)
+![](UVM_AI_assets/image-0099.png)
 
 核心思想：
 
@@ -1130,11 +967,7 @@ my_driver::type_id::set_type_override(my_error_inject_driver::get_type());
 
 ```
 // SoC-level test 中覆盖配置
-// SoC-level test 中覆盖配置
-uvm_config_db
-#(uvm_active_passive_enum)::set(this, "env.blk_env.agent", "is_active", UVM_PASSIVE)
-#(uvm_active_passive_enum)::set(this, "env.blk_env.agent", "is_active", UVM_PASSIVE)
-;
+uvm_config_db#(uvm_active_passive_enum)::set(this, "env.blk_env.agent", "is_active", UVM_PASSIVE);
 ```
 
 你的 agent 代码只需要写一次，通过配置就能在 block-level（主动驱动）和 SoC-level（被动观测）之间切换。
@@ -1167,15 +1000,15 @@ APB（Advanced Peripheral Bus）是 AMBA 协议族中最简单的总线，专为
 
 APB 三状态 FSM：
 
-![](UVM_AI_assets/image-0064.png)
+![](UVM_AI_assets/image-0100.png)
 
 APB 写传输时序：
 
-![](UVM_AI_assets/image-0065.png)
+![](UVM_AI_assets/image-0101.png)
 
 APB 读传输时序：
 
-![](UVM_AI_assets/image-0066.png)
+![](UVM_AI_assets/image-0102.png)
 
 关键点：
 
@@ -1187,97 +1020,22 @@ APB 读传输时序：
 ### 5.7.2 apb\_transaction 定义
 
 ```
-class
-class
- apb_transaction
-extends
-extends
- uvm_sequence_item;
+class apb_transaction extends uvm_sequence_item;
 `uvm_object_utils(apb_transaction)
-`uvm_object_utils(apb_transaction)
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] addr;
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] data;
-rand
-rand
-bit
-bit
-        write;
-// 1=write, 0=read
-// 1=write, 0=read
-rand
-rand
-bit
-bit
- [
-3
-3
-:
-0
-0
-]  strb;
-// APB4 byte strobe
-// APB4 byte strobe
-function
-function
-new
-new
-(
-string
-string
- name =
-"apb_transaction"
-"apb_transaction"
-);
-super
-super
-.new
-.new
-(name);
+
+randbit [31:0] addr;
+randbit [31:0] data;
+randbit        write;      // 1=write, 0=read
+randbit [3:0]  strb;       // APB4 byte strobe
+
+functionnew(string name = "apb_transaction");
+    super.new(name);
 endfunction
+
+functionstring convert2string();
+    return$sformatf("APB %s addr=0x%08h data=0x%08h strb=0x%1h",
+                     write ? "WR" : "RD", addr, data, strb);
 endfunction
-function
-function
-string
-string
- convert2string();
-return
-return
-$sformatf
-$sformatf
-(
-"APB %s addr=0x%08h data=0x%08h strb=0x%1h"
-"APB %s addr=0x%08h data=0x%08h strb=0x%1h"
-,
-                     write ?
-"WR"
-"WR"
- :
-"RD"
-"RD"
-, addr, data, strb);
-endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -1286,188 +1044,51 @@ endclass
 Monitor 是 passive agent 中唯一的活跃组件。它的职责：在 ACCESS phase 的 PREADY=1 时采样信号，封装为 transaction，通过 `analysis_port` 广播（代码中简写为 `ap`）。
 
 ```
-class
-class
- apb_monitor
-extends
-extends
- uvm_monitor;
+class apb_monitor extends uvm_monitor;
 `uvm_component_utils(apb_monitor)
-`uvm_component_utils(apb_monitor)
-virtual
-virtual
- apb_interface  vif;
-  uvm_analysis_port
-#(apb_transaction)
-#(apb_transaction)
-  ap;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+virtual apb_interface  vif;
+  uvm_analysis_port #(apb_transaction)  ap;
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+functionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    ap = new("ap", this);
 endfunction
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    ap =
-new
-new
-(
-"ap"
-"ap"
-,
-this
-this
-);
-endfunction
-endfunction
-task
-task
- run_phase(uvm_phase phase);
-forever
-forever
-begin
-begin
-      @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-// 复位期间不采样
-// 复位期间不采样
-if
-if
- (!vif
-.PRESETn
-.PRESETn
-)
-continue
-continue
-;
-// 等待 SETUP phase：PSEL=1, PENABLE=0
-// 等待 SETUP phase：PSEL=1, PENABLE=0
-if
-if
- (vif
-.PSEL
-.PSEL
- && !vif
-.PENABLE
-.PENABLE
-)
-begin
-begin
-        apb_transaction txn = apb_transaction::type_id::create(
-"txn"
-"txn"
-);
-        txn
-.addr
-.addr
-  = vif
-.PADDR
-.PADDR
-;
-        txn
-.write
-.write
- = vif
-.PWRITE
-.PWRITE
-;
-        txn
-.strb
-.strb
-  = vif
-.PSTRB
-.PSTRB
-;
-// 等待 ACCESS phase 完成：PENABLE=1, PREADY=1
-// 等待 ACCESS phase 完成：PENABLE=1, PREADY=1
-        @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-while
-while
- (vif
-.PSEL
-.PSEL
- && vif
-.PENABLE
-.PENABLE
- && !vif
-.PREADY
-.PREADY
-)
-begin
-begin
-          @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-end
-end
-// 采样数据
-// 采样数据
-if
-if
- (txn
-.write
-.write
-)
-          txn
-.data
-.data
- = vif
-.PWDATA
-.PWDATA
-;
-else
-else
-          txn
-.data
-.data
- = vif
-.PRDATA
-.PRDATA
-;
-        ap
-.write
-.write
-(txn);
-end
-end
-end
-end
+
+task run_phase(uvm_phase phase);
+    foreverbegin
+      @(posedge vif.PCLK);
+
+      // 复位期间不采样
+      if (!vif.PRESETn) continue;
+
+      // 等待 SETUP phase：PSEL=1, PENABLE=0
+      if (vif.PSEL && !vif.PENABLE) begin
+        apb_transaction txn = apb_transaction::type_id::create("txn");
+        txn.addr  = vif.PADDR;
+        txn.write = vif.PWRITE;
+        txn.strb  = vif.PSTRB;
+
+        // 等待 ACCESS phase 完成：PENABLE=1, PREADY=1
+        @(posedge vif.PCLK);
+        while (vif.PSEL && vif.PENABLE && !vif.PREADY) begin
+          @(posedge vif.PCLK);
+        end
+
+        // 采样数据
+        if (txn.write)
+          txn.data = vif.PWDATA;
+        else
+          txn.data = vif.PRDATA;
+
+        ap.write(txn);
+      end
+    end
 endtask
-endtask
-endclass
 endclass
 ```
 
@@ -1482,172 +1103,68 @@ endclass
 Agent 把 Config Object、monitor 组装在一起：
 
 ```
-class
-class
- apb_agent
-extends
-extends
- uvm_agent;
+class apb_agent extends uvm_agent;
 `uvm_component_utils(apb_agent)
-`uvm_component_utils(apb_agent)
+
   apb_agent_config  cfg;
   apb_monitor       mon;
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-// 获取 config
-// 获取 config
-if
-if
- (!uvm_config_db
-#(apb_agent_config)::get(this, "", "cfg", cfg))
-#(apb_agent_config)::get(this, "", "cfg", cfg))
-`uvm_fatal("NOCONFIG", "apb_agent_config not set")
-`uvm_fatal("NOCONFIG", "apb_agent_config not set")
-// Monitor 始终创建
-// Monitor 始终创建
-    mon = apb_monitor::type_id::create(
-"mon"
-"mon"
-,
-this
-this
-);
-// 本篇只用 passive 模式，不创建 driver 和 sequencer
-// 本篇只用 passive 模式，不创建 driver 和 sequencer
-// 扩展为 active 时，参考 §3 的条件实例化方式：
-// 扩展为 active 时，参考 §3 的条件实例化方式：
-//   if (cfg.active == UVM_ACTIVE) begin
-//   if (cfg.active == UVM_ACTIVE) begin
-//     drv = apb_driver::type_id::create("drv", this);
-//     drv = apb_driver::type_id::create("drv", this);
-//     sqr = apb_sequencer::type_id::create("sqr", this);
-//     sqr = apb_sequencer::type_id::create("sqr", this);
-//   end
-//   end
+
+functionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    // 获取 config
+    if (!uvm_config_db#(apb_agent_config)::get(this, "", "cfg", cfg))
+      `uvm_fatal("NOCONFIG", "apb_agent_config not set")
+    // Monitor 始终创建
+    mon = apb_monitor::type_id::create("mon", this);
+    // 本篇只用 passive 模式，不创建 driver 和 sequencer
+    // 扩展为 active 时，参考 §3 的条件实例化方式：
+    //   if (cfg.active == UVM_ACTIVE) begin
+    //     drv = apb_driver::type_id::create("drv", this);
+    //     sqr = apb_sequencer::type_id::create("sqr", this);
+    //   end
 endfunction
+
+functionvoid connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    // 传递 virtual interface 给 monitor
+    mon.vif = cfg.vif;
 endfunction
-function
-function
-void
-void
- connect_phase(uvm_phase phase);
-super
-super
-.connect_phase
-.connect_phase
-(phase);
-// 传递 virtual interface 给 monitor
-// 传递 virtual interface 给 monitor
-    mon
-.vif
-.vif
- = cfg
-.vif
-.vif
-;
-endfunction
-endfunction
-endclass
 endclass
 ```
 
 ### 5.7.5 apb\_config 定义
 
 ```
-class
-class
- apb_agent_config
-extends
-extends
- uvm_object;
-`uvm_object_utils(apb_agent_config)
-`uvm_object_utils(apb_agent_config)
-  uvm_active_passive_enum  active = UVM_PASSIVE;
-// 本篇只用 passive
-// 本篇只用 passive
-virtual
-virtual
- apb_interface    vif;
-function
-function
-new
-new
-(
-string
-string
- name =
-"apb_agent_config"
-"apb_agent_config"
-);
-super
-super
-.new
-.new
-(name);
-endfunction
-endfunction
-endclass
+class apb_agent_config extends uvm_object;
+  `uvm_object_utils(apb_agent_config)
+
+  uvm_active_passive_enum  active = UVM_PASSIVE;  // 本篇只用 passive
+  virtual apb_interface    vif;
+
+  function new(string name = "apb_agent_config");
+    super.new(name);
+  endfunction
 endclass
 ```
 
 ### 5.7.6 在 env 中实例化
 
 ```
-class
-class
- my_env
-extends
-extends
- uvm_env;
+class my_env extends uvm_env;
 `uvm_component_utils(my_env)
-`uvm_component_utils(my_env)
+
   apb_agent        apb_agt;
   apb_agent_config apb_cfg;
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    apb_cfg = apb_agent_config::type_id::create(
-"apb_cfg"
-"apb_cfg"
-);
-// vif 由 test 通过 config_db 传入
-// vif 由 test 通过 config_db 传入
-if
-if
- (!uvm_config_db
-#(virtual apb_interface)::get(this, "", "apb_vif", apb_cfg.vif))
-#(virtual apb_interface)::get(this, "", "apb_vif", apb_cfg.vif))
-`uvm_fatal("NOVIF", "apb_interface not set")
-`uvm_fatal("NOVIF", "apb_interface not set")
-    uvm_config_db
-#(apb_agent_config)::set(this, "apb_agt", "cfg", apb_cfg)
-#(apb_agent_config)::set(this, "apb_agt", "cfg", apb_cfg)
-;
-    apb_agt = apb_agent::type_id::create(
-"apb_agt"
-"apb_agt"
-,
-this
-this
-);
+
+functionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    apb_cfg = apb_agent_config::type_id::create("apb_cfg");
+    // vif 由 test 通过 config_db 传入
+    if (!uvm_config_db#(virtual apb_interface)::get(this, "", "apb_vif", apb_cfg.vif))
+      `uvm_fatal("NOVIF", "apb_interface not set")
+    uvm_config_db#(apb_agent_config)::set(this, "apb_agt", "cfg", apb_cfg);
+    apb_agt = apb_agent::type_id::create("apb_agt", this);
 endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -1663,7 +1180,7 @@ endclass
 
 核心握手流程：
 
-![](UVM_AI_assets/image-0067.png)
+![](UVM_AI_assets/image-0103.png)
 
 Seq-Sqr-Drv 握手流程
 
@@ -1679,8 +1196,7 @@ Seq-Sqr-Drv 握手流程
 
 > 来源：https://mp.weixin.qq.com/s/RpABSbuC-ysRU_tYugGIZw
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 30
-> **已截图**
+> update 2026/08/22 20 : 38
 
 > “
 >
@@ -1718,7 +1234,7 @@ APB 用的是第一种——Driver 按自己的节奏取交易、驱动信号、
 
 它们的协作流程：
 
-![](UVM_AI_assets/image-0068.png)
+![](UVM_AI_assets/image-0104.png)
 
 seq-sqr-drv-handshake
 
@@ -1737,62 +1253,23 @@ seq-sqr-drv-handshake
 **Sequence 端：**
 
 ```
-task
-task
- body();
-  req = apb_transaction::type_id::create(
-"req"
-"req"
-);
+task body();
+  req = apb_transaction::type_id::create("req");
   start_item(req);
-assert
-assert
-(req
-.randomize
-.randomize
-()
-with
-with
- { addr ==
-32'h1000_0000
-32'h1000_0000
-; write ==
-1
-1
-; });
+  assert(req.randomize() with { addr == 32'h1000_0000; write == 1; });
   finish_item(req);
-endtask
 endtask
 ```
 
 **Driver 端：**
 
 ```
-task
-task
- run_phase(uvm_phase phase);
-forever
-forever
-begin
-begin
-    seq_item_port
-.get_next_item
-.get_next_item
-(req);
-// 阻塞等待
-// 阻塞等待
-    drive_transfer(req);
-// 驱动信号
-// 驱动信号
-    seq_item_port
-.item_done
-.item_done
-();
-// 完成
-// 完成
-end
-end
-endtask
+task run_phase(uvm_phase phase);
+  forever begin
+    seq_item_port.get_next_item(req);   // 阻塞等待
+    drive_transfer(req);                 // 驱动信号
+    seq_item_port.item_done();           // 完成
+  end
 endtask
 ```
 
@@ -1842,10 +1319,7 @@ Sequencer 内部维护一个 **请求队列**。多个 Sequence 可以同时挂
 用 `set_arbitration()` 设置：
 
 ```
-sequencer
-.set_arbitration
-.set_arbitration
-(SEQ_ARB_STRICT_FIFO);
+sequencer.set_arbitration(SEQ_ARB_STRICT_FIFO);
 ```
 
 优先级通过 `start_item(req, priority)` 的第二个参数控制，数字越大越优先。
@@ -1859,41 +1333,14 @@ sequencer
 
 ```
 // lock：礼貌地排队独占
-// lock：礼貌地排队独占
-sequencer
-.lock
-.lock
-(
-this
-this
-);
+sequencer.lock(this);
 // ... 发多笔交易 ...
-// ... 发多笔交易 ...
-sequencer
-.unlock
-.unlock
-(
-this
-this
-);
+sequencer.unlock(this);
+
 // grab：不排队，直接抢
-// grab：不排队，直接抢
-sequencer
-.grab
-.grab
-(
-this
-this
-);
+sequencer.grab(this);
 // ... 发多笔交易 ...
-// ... 发多笔交易 ...
-sequencer
-.ungrab
-.ungrab
-(
-this
-this
-);
+sequencer.ungrab(this);
 ```
 
 实际用得不多。大多数场景下用一个专门的 sequence 发连续交易就够了，不需要显式 lock。
@@ -1931,188 +1378,52 @@ APB 协议本身适合 unidirectional non-pipelined：
 Driver 的职责：拿到 transaction，按 APB 协议驱动信号。
 
 ```
-class
-class
- apb_driver
-extends
-extends
- uvm_driver
-#(apb_transaction)
-#(apb_transaction)
-;
+class apb_driver extends uvm_driver #(apb_transaction);
 `uvm_component_utils(apb_driver)
-`uvm_component_utils(apb_driver)
-virtual
-virtual
- apb_if vif;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+virtual apb_if vif;
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#(virtual apb_if)::get(this, "", "vif", vif))
+      `uvm_fatal("DRV", "Failed to get vif")
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-if
-if
- (!uvm_config_db
-#(virtual apb_if)::get(this, "", "vif", vif))
-#(virtual apb_if)::get(this, "", "vif", vif))
-`uvm_fatal("DRV", "Failed to get vif")
-`uvm_fatal("DRV", "Failed to get vif")
-endfunction
-endfunction
-task
-task
- run_phase(uvm_phase phase);
-forever
-forever
-begin
-begin
-      seq_item_port
-.get_next_item
-.get_next_item
-(req);
+
+task run_phase(uvm_phase phase);
+    foreverbegin
+      seq_item_port.get_next_item(req);
       drive_transfer(req);
-      seq_item_port
-.item_done
-.item_done
-();
-end
-end
+      seq_item_port.item_done();
+    end
 endtask
+
+task drive_transfer(apb_transaction txn);
+    // SETUP phase
+    @(posedge vif.PCLK);
+    vif.PSEL    <= 1'b1;
+    vif.PENABLE <= 1'b0;
+    vif.PADDR   <= txn.addr;
+    vif.PWRITE  <= txn.write;
+    if (txn.write)
+      vif.PWDATA <= txn.data;
+
+    // ACCESS phase
+    @(posedge vif.PCLK);
+    vif.PENABLE <= 1'b1;
+
+    // 等待 PREADY=1
+    do @(posedge vif.PCLK);
+    while (!vif.PREADY);
+
+    // 撤销（下一拍）
+    @(posedge vif.PCLK);
+    vif.PSEL    <= 1'b0;
+    vif.PENABLE <= 1'b0;
 endtask
-task
-task
- drive_transfer(apb_transaction txn);
-// SETUP phase
-// SETUP phase
-    @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-    vif
-.PSEL
-.PSEL
-    <=
-1'b1
-1'b1
-;
-    vif
-.PENABLE
-.PENABLE
- <=
-1'b0
-1'b0
-;
-    vif
-.PADDR
-.PADDR
-   <= txn
-.addr
-.addr
-;
-    vif
-.PWRITE
-.PWRITE
-  <= txn
-.write
-.write
-;
-if
-if
- (txn
-.write
-.write
-)
-      vif
-.PWDATA
-.PWDATA
- <= txn
-.data
-.data
-;
-// ACCESS phase
-// ACCESS phase
-    @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-    vif
-.PENABLE
-.PENABLE
- <=
-1'b1
-1'b1
-;
-// 等待 PREADY=1
-// 等待 PREADY=1
-do
-do
- @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-while
-while
- (!vif
-.PREADY
-.PREADY
-);
-// 撤销（下一拍）
-// 撤销（下一拍）
-    @(
-posedge
-posedge
- vif
-.PCLK
-.PCLK
-);
-    vif
-.PSEL
-.PSEL
-    <=
-1'b0
-1'b0
-;
-    vif
-.PENABLE
-.PENABLE
- <=
-1'b0
-1'b0
-;
-endtask
-endtask
-endclass
 endclass
 ```
 
@@ -2128,33 +1439,12 @@ endclass
 Sequencer 只需要参数化，不需要额外逻辑：
 
 ```
-class
-class
- apb_master_sequencer
-extends
-extends
- uvm_sequencer
-#(apb_transaction)
-#(apb_transaction)
-;
-`uvm_component_utils(apb_master_sequencer)
-`uvm_component_utils(apb_master_sequencer)
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
-endfunction
-endfunction
-endclass
+class apb_master_sequencer extends uvm_sequencer #(apb_transaction);
+  `uvm_component_utils(apb_master_sequencer)
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
 endclass
 ```
 
@@ -2165,116 +1455,35 @@ endclass
 写一笔交易的 sequence：
 
 ```
-class
-class
- apb_write_sequence
-extends
-extends
- uvm_sequence
-#(apb_transaction)
-#(apb_transaction)
-;
+class apb_write_sequence extends uvm_sequence #(apb_transaction);
 `uvm_object_utils(apb_write_sequence)
-`uvm_object_utils(apb_write_sequence)
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] addr;
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] data;
-function
-function
-new
-new
-(
-string
-string
- name =
-"apb_write_sequence"
-"apb_write_sequence"
-);
-super
-super
-.new
-.new
-(name);
+
+randbit [31:0] addr;
+randbit [31:0] data;
+
+functionnew(string name = "apb_write_sequence");
+    super.new(name);
 endfunction
-endfunction
-task
-task
- body();
-    req = apb_transaction::type_id::create(
-"req"
-"req"
-);
+
+task body();
+    req = apb_transaction::type_id::create("req");
     start_item(req);
-assert
-assert
-(req
-.randomize
-.randomize
-()
-with
-with
- {
-      req
-.addr
-.addr
-  ==
-local
-local
-::addr;
-      req
-.write
-.write
- ==
-1
-1
-;
-      req
-.data
-.data
-  ==
-local
-local
-::data;
+    assert(req.randomize() with {
+      req.addr  == local::addr;
+      req.write == 1;
+      req.data  == local::data;
     });
     finish_item(req);
 endtask
-endtask
-endclass
 endclass
 ```
 
 `addr` 和 `data` 是 sequence 的成员变量，可以在 test 中 `randomize` 后再调 `start`。也可以用 `` `uvm_do_with `` 简化：
 
 ```
-task
-task
- body();
-  req = apb_transaction::type_id::create(
-"req"
-"req"
-);
-`uvm_do_with(req, { req.addr == local::addr; req.write == 1; req.data == local::data; })
-`uvm_do_with(req, { req.addr == local::addr; req.write == 1; req.data == local::data; })
-endtask
+task body();
+  req = apb_transaction::type_id::create("req");
+  `uvm_do_with(req, { req.addr == local::addr; req.write == 1; req.data == local::data; })
 endtask
 ```
 
@@ -2283,88 +1492,24 @@ endtask
 扩展一下，发 N 笔连续写：
 
 ```
-class
-class
- apb_write_burst_sequence
-extends
-extends
- uvm_sequence
-#(apb_transaction)
-#(apb_transaction)
-;
+class apb_write_burst_sequence extends uvm_sequence #(apb_transaction);
 `uvm_object_utils(apb_write_burst_sequence)
-`uvm_object_utils(apb_write_burst_sequence)
-rand
-rand
-int
-int
-unsigned
-unsigned
- num_txns;
-constraint
-constraint
- c_num { num_txns
-inside
-inside
- {[
-1
-1
-:
-16
-16
-]}; }
-function
-function
-new
-new
-(
-string
-string
- name =
-"apb_write_burst_sequence"
-"apb_write_burst_sequence"
-);
-super
-super
-.new
-.new
-(name);
+
+randintunsigned num_txns;
+constraint c_num { num_txns inside {[1:16]}; }
+
+functionnew(string name = "apb_write_burst_sequence");
+    super.new(name);
 endfunction
-endfunction
-task
-task
- body();
-repeat
-repeat
- (num_txns)
-begin
-begin
-      req = apb_transaction::type_id::create(
-"req"
-"req"
-);
+
+task body();
+    repeat (num_txns) begin
+      req = apb_transaction::type_id::create("req");
       start_item(req);
-assert
-assert
-(req
-.randomize
-.randomize
-()
-with
-with
- { req
-.write
-.write
- ==
-1
-1
-; });
+      assert(req.randomize() with { req.write == 1; });
       finish_item(req);
-end
-end
+    end
 endtask
-endtask
-endclass
 endclass
 ```
 
@@ -2375,101 +1520,31 @@ endclass
 上篇的 agent 是 passive，只有 monitor。现在加上 driver 和 sequencer：
 
 ```
-class
-class
- apb_agent
-extends
-extends
- uvm_agent;
+class apb_agent extends uvm_agent;
 `uvm_component_utils(apb_agent)
-`uvm_component_utils(apb_agent)
+
   apb_monitor          mon;
   apb_driver           drv;
   apb_master_sequencer sqr;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    mon = apb_monitor::type_id::create("mon", this);
+    if (is_active == UVM_ACTIVE) begin
+      drv = apb_driver::type_id::create("drv", this);
+      sqr = apb_master_sequencer::type_id::create("sqr", this);
+    end
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    mon = apb_monitor::type_id::create(
-"mon"
-"mon"
-,
-this
-this
-);
-if
-if
- (is_active == UVM_ACTIVE)
-begin
-begin
-      drv = apb_driver::type_id::create(
-"drv"
-"drv"
-,
-this
-this
-);
-      sqr = apb_master_sequencer::type_id::create(
-"sqr"
-"sqr"
-,
-this
-this
-);
-end
-end
+
+virtualfunctionvoid connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (is_active == UVM_ACTIVE)
+      drv.seq_item_port.connect(sqr.seq_item_export);
 endfunction
-endfunction
-virtual
-virtual
-function
-function
-void
-void
- connect_phase(uvm_phase phase);
-super
-super
-.connect_phase
-.connect_phase
-(phase);
-if
-if
- (is_active == UVM_ACTIVE)
-      drv
-.seq_item_port
-.seq_item_port
-.connect
-.connect
-(sqr
-.seq_item_export
-.seq_item_export
-);
-endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -2483,95 +1558,30 @@ endclass
 最后，在 test 里启动 sequence：
 
 ```
-class
-class
- apb_write_test
-extends
-extends
- uvm_test;
+class apb_write_test extends uvm_test;
 `uvm_component_utils(apb_write_test)
-`uvm_component_utils(apb_write_test)
+
   apb_env env;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    env = apb_env::type_id::create("env", this);
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    env = apb_env::type_id::create(
-"env"
-"env"
-,
-this
-this
-);
-endfunction
-endfunction
-task
-task
- run_phase(uvm_phase phase);
+
+task run_phase(uvm_phase phase);
     apb_write_burst_sequence seq;
-    phase
-.raise_objection
-.raise_objection
-(
-this
-this
-);
-    seq = apb_write_burst_sequence::type_id::create(
-"seq"
-"seq"
-);
-assert
-assert
-(seq
-.randomize
-.randomize
-());
-    seq
-.start
-.start
-(env
-.agt
-.agt
-.sqr
-.sqr
-);
-    #
-100
-100
-ns;
-    phase
-.drop_objection
-.drop_objection
-(
-this
-this
-);
+
+    phase.raise_objection(this);
+    seq = apb_write_burst_sequence::type_id::create("seq");
+    assert(seq.randomize());
+    seq.start(env.agt.sqr);
+    #100ns;
+    phase.drop_objection(this);
 endtask
-endtask
-endclass
 endclass
 ```
 
@@ -2612,8 +1622,7 @@ UVM VIP开发系列：
 
 > 来源：https://mp.weixin.qq.com/s/WntLXtJv4LsqtV5ZFz2GJw
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 30
-> **已截图**
+> update 2026/08/22 20 : 38
 
 > “
 >
@@ -2673,46 +1682,24 @@ UVM 提供两种方式把 response 从 Driver 传回 Sequence：
 
 ```
 // Driver 端
-// Driver 端
-seq_item_port
-.get_next_item
-.get_next_item
-(req);
+seq_item_port.get_next_item(req);
 drive_transfer(req);
-seq_item_port
-.item_done
-.item_done
-(rsp);
-// 把 response 放入 response queue
-// 把 response 放入 response queue
-// Sequence 端
+seq_item_port.item_done(rsp);  // 把 response 放入 response queue
+
 // Sequence 端
 start_item(req);
-finish_item(req);
-// 阻塞，等 item_done
-// 阻塞，等 item_done
-get_response(rsp);
-// 可选：需要读取 response 时才调
-// 可选：需要读取 response 时才调
+finish_item(req);              // 阻塞，等 item_done
+get_response(rsp);             // 可选：需要读取 response 时才调
 ```
 
 **方式二：put(rsp)**
 
 ```
 // Driver 端
-// Driver 端
-seq_item_port
-.get_next_item
-.get_next_item
-(req);
+seq_item_port.get_next_item(req);
 drive_transfer(req);
-seq_item_port
-.put
-.put
-(rsp);
-// 主动 put response
-// 主动 put response
-// Sequence 端
+seq_item_port.put(rsp);  // 主动 put response
+
 // Sequence 端
 start_item(req);
 finish_item(req);
@@ -2733,33 +1720,9 @@ AHB 用第一种就够了——驱动完地址 phase 和 data phase，拿到 HRD
 UVM 的 sequence 和 driver 支持两个类型参数：
 
 ```
-class
-class
- ahb_sequence
-extends
-extends
- uvm_sequence
-#(ahb_transaction, ahb_response)
-#(ahb_transaction, ahb_response)
-;
-class
-class
- ahb_driver
-extends
-extends
- uvm_driver
-#(ahb_transaction, ahb_response)
-#(ahb_transaction, ahb_response)
-;
-class
-class
- ahb_sequencer
-extends
-extends
- uvm_sequencer
-#(ahb_transaction, ahb_response)
-#(ahb_transaction, ahb_response)
-;
+class ahb_sequence extends uvm_sequence #(ahb_transaction, ahb_response);
+class ahb_driver extends uvm_driver #(ahb_transaction, ahb_response);
+class ahb_sequencer extends uvm_sequencer #(ahb_transaction, ahb_response);
 ```
 
 第一个是 REQ（请求），第二个是 RSP（响应）。
@@ -2826,14 +1789,14 @@ extends
 
 ### 7.4.5 单笔写时序
 
-![](UVM_AI_assets/image-0069.png)
+![](UVM_AI_assets/image-0105.png)
 
 - 第 1 拍（Address phase）：HTRANS=NONSEQ，HADDR=目标地址，HWRITE=1
 - 第 2 拍（Data phase）：HWDATA=写数据，HREADY=1 表示完成
 
 ### 7.4.6 单笔读时序
 
-![](UVM_AI_assets/image-0070.png)
+![](UVM_AI_assets/image-0106.png)
 
 - 第 1 拍（Address phase）：HTRANS=NONSEQ，HADDR=目标地址，HWRITE=0
 - 第 2 拍（Data phase）：HRDATA=读数据，HREADY=1 表示完成
@@ -2842,7 +1805,7 @@ extends
 
 如果 Slave 需要更多时间，可以在 Data phase 拉低 HREADY，插入等待周期：
 
-![](UVM_AI_assets/image-0071.png)
+![](UVM_AI_assets/image-0107.png)
 
 HREADY=0 期间，Master 等待。HREADY=1 时数据有效，传输完成。
 
@@ -2853,123 +1816,31 @@ HREADY=0 期间，Master 等待。HREADY=1 时数据有效，传输完成。
 ### 7.5.1 ahb\_transaction 定义
 
 ```
-class
-class
- ahb_transaction
-extends
-extends
- uvm_sequence_item;
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] addr;
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] data;
-rand
-rand
-bit
-bit
-        write;
-rand
-rand
-bit
-bit
- [
-2
-2
-:
-0
-0
-]  burst;
-rand
-rand
-bit
-bit
- [
-2
-2
-:
-0
-0
-]  size;
-rand
-rand
-bit
-bit
- [
-1
-1
-:
-0
-0
-]  trans;
+class ahb_transaction extends uvm_sequence_item;
+randbit [31:0] addr;
+randbit [31:0] data;
+randbit        write;
+randbit [2:0]  burst;
+randbit [2:0]  size;
+randbit [1:0]  trans;
+
 `uvm_object_utils_begin(ahb_transaction)
-`uvm_object_utils_begin(ahb_transaction)
-`uvm_field_int(addr,  UVM_ALL_ON)
-`uvm_field_int(addr,  UVM_ALL_ON)
-`uvm_field_int(data,  UVM_ALL_ON)
-`uvm_field_int(data,  UVM_ALL_ON)
-`uvm_field_int(write, UVM_ALL_ON)
-`uvm_field_int(write, UVM_ALL_ON)
-`uvm_field_int(burst, UVM_ALL_ON)
-`uvm_field_int(burst, UVM_ALL_ON)
-`uvm_field_int(size,  UVM_ALL_ON)
-`uvm_field_int(size,  UVM_ALL_ON)
-`uvm_field_int(trans, UVM_ALL_ON)
-`uvm_field_int(trans, UVM_ALL_ON)
+    `uvm_field_int(addr,  UVM_ALL_ON)
+    `uvm_field_int(data,  UVM_ALL_ON)
+    `uvm_field_int(write, UVM_ALL_ON)
+    `uvm_field_int(burst, UVM_ALL_ON)
+    `uvm_field_int(size,  UVM_ALL_ON)
+    `uvm_field_int(trans, UVM_ALL_ON)
 `uvm_object_utils_end
-`uvm_object_utils_end
-function
-function
-new
-new
-(
-string
-string
- name =
-"ahb_transaction"
-"ahb_transaction"
-);
-super
-super
-.new
-.new
-(name);
+
+functionnew(string name = "ahb_transaction");
+    super.new(name);
 endfunction
-endfunction
-constraint
-constraint
- c_single {
-    burst ==
-3'b000
-3'b000
-;
-// SINGLE
-// SINGLE
-    trans ==
-2'b10
-2'b10
-;
-// NONSEQ
-// NONSEQ
+
+constraint c_single {
+    burst == 3'b000;  // SINGLE
+    trans == 2'b10;   // NONSEQ
   }
-endclass
 endclass
 ```
 
@@ -2983,191 +1854,51 @@ endclass
 ### 7.5.2 ahb\_driver 实现
 
 ```
-class
-class
- ahb_driver
-extends
-extends
- uvm_driver
-#(ahb_transaction)
-#(ahb_transaction)
-;
+class ahb_driver extends uvm_driver #(ahb_transaction);
 `uvm_component_utils(ahb_driver)
-`uvm_component_utils(ahb_driver)
-virtual
-virtual
- ahb_if vif;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+virtual ahb_if vif;
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db#(virtual ahb_if)::get(this, "", "vif", vif))
+      `uvm_fatal("DRV", "Failed to get vif")
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-if
-if
- (!uvm_config_db
-#(virtual ahb_if)::get(this, "", "vif", vif))
-#(virtual ahb_if)::get(this, "", "vif", vif))
-`uvm_fatal("DRV", "Failed to get vif")
-`uvm_fatal("DRV", "Failed to get vif")
-endfunction
-endfunction
-task
-task
- run_phase(uvm_phase phase);
-forever
-forever
-begin
-begin
-      seq_item_port
-.get_next_item
-.get_next_item
-(req);
+
+task run_phase(uvm_phase phase);
+    foreverbegin
+      seq_item_port.get_next_item(req);
       drive_transfer(req);
-      seq_item_port
-.item_done
-.item_done
-(req);
-// 用 req 作为 response（单参数）
-// 用 req 作为 response（单参数）
-end
-end
+      seq_item_port.item_done(req);  // 用 req 作为 response（单参数）
+    end
 endtask
+
+task drive_transfer(ahb_transaction txn);
+    // Address phase
+    @(posedge vif.HCLK);
+    vif.HADDR  <= txn.addr;
+    vif.HTRANS <= txn.trans;
+    vif.HWRITE <= txn.write;
+    vif.HSIZE  <= txn.size;
+    vif.HBURST <= txn.burst;
+    if (txn.write)
+      vif.HWDATA <= txn.data;
+
+    // 等待 HREADY（地址 phase 可能被 slave 延迟）
+    while (!vif.HREADY) @(posedge vif.HCLK);
+
+    // Data phase
+    @(posedge vif.HCLK);
+    while (!vif.HREADY) @(posedge vif.HCLK);
+
+    // 采样 response
+    if (!txn.write)
+      txn.data = vif.HRDATA;
 endtask
-task
-task
- drive_transfer(ahb_transaction txn);
-// Address phase
-// Address phase
-    @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-    vif
-.HADDR
-.HADDR
-  <= txn
-.addr
-.addr
-;
-    vif
-.HTRANS
-.HTRANS
- <= txn
-.trans
-.trans
-;
-    vif
-.HWRITE
-.HWRITE
- <= txn
-.write
-.write
-;
-    vif
-.HSIZE
-.HSIZE
-  <= txn
-.size
-.size
-;
-    vif
-.HBURST
-.HBURST
- <= txn
-.burst
-.burst
-;
-if
-if
- (txn
-.write
-.write
-)
-      vif
-.HWDATA
-.HWDATA
- <= txn
-.data
-.data
-;
-// 等待 HREADY（地址 phase 可能被 slave 延迟）
-// 等待 HREADY（地址 phase 可能被 slave 延迟）
-while
-while
- (!vif
-.HREADY
-.HREADY
-) @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-// Data phase
-// Data phase
-    @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-while
-while
- (!vif
-.HREADY
-.HREADY
-) @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-// 采样 response
-// 采样 response
-if
-if
- (!txn
-.write
-.write
-)
-      txn
-.data
-.data
- = vif
-.HRDATA
-.HRDATA
-;
-endtask
-endtask
-endclass
 endclass
 ```
 
@@ -3182,218 +1913,54 @@ endclass
 ### 7.5.3 ahb\_monitor 实现
 
 ```
-class
-class
- ahb_monitor
-extends
-extends
- uvm_monitor;
+class ahb_monitor extends uvm_monitor;
 `uvm_component_utils(ahb_monitor)
-`uvm_component_utils(ahb_monitor)
-virtual
-virtual
- ahb_if vif;
-  uvm_analysis_port
-#(ahb_transaction)
-#(ahb_transaction)
- ap;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+virtual ahb_if vif;
+  uvm_analysis_port #(ahb_transaction) ap;
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    ap = new("ap", this);
+    if (!uvm_config_db#(virtual ahb_if)::get(this, "", "vif", vif))
+      `uvm_fatal("MON", "Failed to get vif")
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    ap =
-new
-new
-(
-"ap"
-"ap"
-,
-this
-this
-);
-if
-if
- (!uvm_config_db
-#(virtual ahb_if)::get(this, "", "vif", vif))
-#(virtual ahb_if)::get(this, "", "vif", vif))
-`uvm_fatal("MON", "Failed to get vif")
-`uvm_fatal("MON", "Failed to get vif")
-endfunction
-endfunction
-task
-task
- run_phase(uvm_phase phase);
-forever
-forever
-begin
-begin
-      @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-if
-if
- (!vif
-.HRESETn
-.HRESETn
-)
-continue
-continue
-;
-// 检测有效传输（NONSEQ 或 SEQ）
-// 检测有效传输（NONSEQ 或 SEQ）
-if
-if
- (vif
-.HTRANS
-.HTRANS
- ==
-2'b10
-2'b10
- || vif
-.HTRANS
-.HTRANS
- ==
-2'b11
-2'b11
-)
-begin
-begin
-        ahb_transaction txn = ahb_transaction::type_id::create(
-"txn"
-"txn"
-);
-        txn
-.addr
-.addr
-  = vif
-.HADDR
-.HADDR
-;
-        txn
-.write
-.write
- = vif
-.HWRITE
-.HWRITE
-;
-        txn
-.size
-.size
-  = vif
-.HSIZE
-.HSIZE
-;
-        txn
-.burst
-.burst
- = vif
-.HBURST
-.HBURST
-;
-        txn
-.trans
-.trans
- = vif
-.HTRANS
-.HTRANS
-;
-// 等待地址 phase 完成
-// 等待地址 phase 完成
-while
-while
- (!vif
-.HREADY
-.HREADY
-) @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-// 等待数据 phase
-// 等待数据 phase
-        @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-while
-while
- (!vif
-.HREADY
-.HREADY
-) @(
-posedge
-posedge
- vif
-.HCLK
-.HCLK
-);
-// 采样数据
-// 采样数据
-if
-if
- (txn
-.write
-.write
-)
-          txn
-.data
-.data
- = vif
-.HWDATA
-.HWDATA
-;
-else
-else
-          txn
-.data
-.data
- = vif
-.HRDATA
-.HRDATA
-;
-        ap
-.write
-.write
-(txn);
-end
-end
-end
-end
+
+task run_phase(uvm_phase phase);
+    foreverbegin
+      @(posedge vif.HCLK);
+      if (!vif.HRESETn) continue;
+
+      // 检测有效传输（NONSEQ 或 SEQ）
+      if (vif.HTRANS == 2'b10 || vif.HTRANS == 2'b11) begin
+        ahb_transaction txn = ahb_transaction::type_id::create("txn");
+        txn.addr  = vif.HADDR;
+        txn.write = vif.HWRITE;
+        txn.size  = vif.HSIZE;
+        txn.burst = vif.HBURST;
+        txn.trans = vif.HTRANS;
+
+        // 等待地址 phase 完成
+        while (!vif.HREADY) @(posedge vif.HCLK);
+
+        // 等待数据 phase
+        @(posedge vif.HCLK);
+        while (!vif.HREADY) @(posedge vif.HCLK);
+
+        // 采样数据
+        if (txn.write)
+          txn.data = vif.HWDATA;
+        else
+          txn.data = vif.HRDATA;
+
+        ap.write(txn);
+      end
+    end
 endtask
-endtask
-endclass
 endclass
 ```
 
@@ -3407,101 +1974,31 @@ endclass
 ### 7.5.4 ahb\_master\_agent
 
 ```
-class
-class
- ahb_master_agent
-extends
-extends
- uvm_agent;
+class ahb_master_agent extends uvm_agent;
 `uvm_component_utils(ahb_master_agent)
-`uvm_component_utils(ahb_master_agent)
+
   ahb_monitor          mon;
   ahb_driver           drv;
   ahb_master_sequencer sqr;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    mon = ahb_monitor::type_id::create("mon", this);
+    if (is_active == UVM_ACTIVE) begin
+      drv = ahb_driver::type_id::create("drv", this);
+      sqr = ahb_master_sequencer::type_id::create("sqr", this);
+    end
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-    mon = ahb_monitor::type_id::create(
-"mon"
-"mon"
-,
-this
-this
-);
-if
-if
- (is_active == UVM_ACTIVE)
-begin
-begin
-      drv = ahb_driver::type_id::create(
-"drv"
-"drv"
-,
-this
-this
-);
-      sqr = ahb_master_sequencer::type_id::create(
-"sqr"
-"sqr"
-,
-this
-this
-);
-end
-end
+
+virtualfunctionvoid connect_phase(uvm_phase phase);
+    super.connect_phase(phase);
+    if (is_active == UVM_ACTIVE)
+      drv.seq_item_port.connect(sqr.seq_item_export);
 endfunction
-endfunction
-virtual
-virtual
-function
-function
-void
-void
- connect_phase(uvm_phase phase);
-super
-super
-.connect_phase
-.connect_phase
-(phase);
-if
-if
- (is_active == UVM_ACTIVE)
-      drv
-.seq_item_port
-.seq_item_port
-.connect
-.connect
-(sqr
-.seq_item_export
-.seq_item_export
-);
-endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -3510,197 +2007,49 @@ endclass
 ### 7.5.5 ahb\_write\_seq / ahb\_read\_seq
 
 ```
-class
-class
- ahb_write_seq
-extends
-extends
- uvm_sequence
-#(ahb_transaction)
-#(ahb_transaction)
-;
+class ahb_write_seq extends uvm_sequence #(ahb_transaction);
 `uvm_object_utils(ahb_write_seq)
-`uvm_object_utils(ahb_write_seq)
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] addr;
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] data;
-function
-function
-new
-new
-(
-string
-string
- name =
-"ahb_write_seq"
-"ahb_write_seq"
-);
-super
-super
-.new
-.new
-(name);
+
+randbit [31:0] addr;
+randbit [31:0] data;
+
+functionnew(string name = "ahb_write_seq");
+    super.new(name);
 endfunction
-endfunction
-task
-task
- body();
-    req = ahb_transaction::type_id::create(
-"req"
-"req"
-);
+
+task body();
+    req = ahb_transaction::type_id::create("req");
     start_item(req);
-assert
-assert
-(req
-.randomize
-.randomize
-()
-with
-with
- {
-      req
-.addr
-.addr
-  ==
-local
-local
-::addr;
-      req
-.write
-.write
- ==
-1
-1
-;
-      req
-.data
-.data
-  ==
-local
-local
-::data;
+    assert(req.randomize() with {
+      req.addr  == local::addr;
+      req.write == 1;
+      req.data  == local::data;
     });
     finish_item(req);
 endtask
-endtask
 endclass
-endclass
-class
-class
- ahb_read_seq
-extends
-extends
- uvm_sequence
-#(ahb_transaction)
-#(ahb_transaction)
-;
+
+class ahb_read_seq extends uvm_sequence #(ahb_transaction);
 `uvm_object_utils(ahb_read_seq)
-`uvm_object_utils(ahb_read_seq)
-rand
-rand
-bit
-bit
- [
-31
-31
-:
-0
-0
-] addr;
-bit
-bit
- [
-31
-31
-:
-0
-0
-] rdata;
-function
-function
-new
-new
-(
-string
-string
- name =
-"ahb_read_seq"
-"ahb_read_seq"
-);
-super
-super
-.new
-.new
-(name);
+
+randbit [31:0] addr;
+bit [31:0] rdata;
+
+functionnew(string name = "ahb_read_seq");
+    super.new(name);
 endfunction
-endfunction
-task
-task
- body();
-    req = ahb_transaction::type_id::create(
-"req"
-"req"
-);
+
+task body();
+    req = ahb_transaction::type_id::create("req");
     start_item(req);
-assert
-assert
-(req
-.randomize
-.randomize
-()
-with
-with
- {
-      req
-.addr
-.addr
-  ==
-local
-local
-::addr;
-      req
-.write
-.write
- ==
-0
-0
-;
+    assert(req.randomize() with {
+      req.addr  == local::addr;
+      req.write == 0;
     });
-    finish_item(req);
-// 阻塞，等 item_done
-// 阻塞，等 item_done
-    get_response(req);
-// 从 response queue 取出（单参数下 req=rsp，driver 修改的 data 在此可见）
-// 从 response queue 取出（单参数下 req=rsp，driver 修改的 data 在此可见）
-    rdata = req
-.data
-.data
-;
-// Slave 返回的读数据
-// Slave 返回的读数据
+    finish_item(req);              // 阻塞，等 item_done
+    get_response(req);             // 从 response queue 取出（单参数下 req=rsp，driver 修改的 data 在此可见）
+    rdata = req.data;              // Slave 返回的读数据
 endtask
-endtask
-endclass
 endclass
 ```
 
@@ -3712,37 +2061,15 @@ endclass
 ### 7.5.6 ahb\_config 定义
 
 ```
-class
-class
- ahb_config
-extends
-extends
- uvm_object;
-`uvm_object_utils(ahb_config)
-`uvm_object_utils(ahb_config)
-virtual
-virtual
- ahb_if vif;
+class ahb_config extends uvm_object;
+  `uvm_object_utils(ahb_config)
+
+  virtual ahb_if vif;
   uvm_active_passive_enum is_active = UVM_ACTIVE;
-function
-function
-new
-new
-(
-string
-string
- name =
-"ahb_config"
-"ahb_config"
-);
-super
-super
-.new
-.new
-(name);
-endfunction
-endfunction
-endclass
+
+  function new(string name = "ahb_config");
+    super.new(name);
+  endfunction
 endclass
 ```
 
@@ -3751,74 +2078,30 @@ endclass
 ### 7.5.7 在 env 中实例化
 
 ```
-class
-class
- ahb_env
-extends
-extends
- uvm_env;
+class ahb_env extends uvm_env;
 `uvm_component_utils(ahb_env)
-`uvm_component_utils(ahb_env)
+
   ahb_master_agent agt;
   ahb_config       cfg;
-function
-function
-new
-new
-(
-string
-string
- name, uvm_component parent);
-super
-super
-.new
-.new
-(name, parent);
+
+functionnew(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
+
+virtualfunctionvoid build_phase(uvm_phase phase);
+    super.build_phase(phase);
+
+    // 创建 config
+    cfg = ahb_config::type_id::create("cfg");
+    if (!uvm_config_db#(virtual ahb_if)::get(this, "", "vif", cfg.vif))
+      `uvm_fatal("ENV", "Failed to get vif")
+
+    // 设置 config
+    uvm_config_db#(ahb_config)::set(this, "agt*", "cfg", cfg);
+
+    // 创建 agent
+    agt = ahb_master_agent::type_id::create("agt", this);
 endfunction
-virtual
-virtual
-function
-function
-void
-void
- build_phase(uvm_phase phase);
-super
-super
-.build_phase
-.build_phase
-(phase);
-// 创建 config
-// 创建 config
-    cfg = ahb_config::type_id::create(
-"cfg"
-"cfg"
-);
-if
-if
- (!uvm_config_db
-#(virtual ahb_if)::get(this, "", "vif", cfg.vif))
-#(virtual ahb_if)::get(this, "", "vif", cfg.vif))
-`uvm_fatal("ENV", "Failed to get vif")
-`uvm_fatal("ENV", "Failed to get vif")
-// 设置 config
-// 设置 config
-    uvm_config_db
-#(ahb_config)::set(this, "agt*", "cfg", cfg)
-#(ahb_config)::set(this, "agt*", "cfg", cfg)
-;
-// 创建 agent
-// 创建 agent
-    agt = ahb_master_agent::type_id::create(
-"agt"
-"agt"
-,
-this
-this
-);
-endfunction
-endfunction
-endclass
 endclass
 ```
 
@@ -3856,10 +2139,9 @@ UVM VIP 开发系列：
 
 > 来源：https://mp.weixin.qq.com/s/JPJMb_WtbNge857dP66kCg
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 31
-> **已截图**
+> update 2026/08/22 20 : 38
 
-![](UVM_AI_assets/image-0072.png)
+![](UVM_AI_assets/image-0108.png)
 
 ## 8.1 一周没更新，后台炸了
 
@@ -3883,53 +2165,16 @@ UVM VIP 开发系列：
 
 ```
 // AI 生成的"精彩"代码
-// AI 生成的"精彩"代码
-class
-class
- apb_driver
-extends
-extends
- uvm_driver;
-    def run_phase(self, phase):
-// 这是 Python 吧？！
-// 这是 Python 吧？！
-while
-while
- True:
-            item = self
-.seq_item_port
-.seq_item_port
-.get_next_item
-.get_next_item
-()
-            self
-.drive
-.drive
-(item)
-function
-function
- drive(item):
-// SV 里混 Python？
-// SV 里混 Python？
-if
-if
- item
-.direction
-.direction
- ==
-"READ"
-"READ"
-:
-            self
-.vif
-.vif
-.paddr
-.paddr
- = item
-.addr
-.addr
-// ...
-// ...
+class apb_driver extends uvm_driver;
+    def run_phase(self, phase):  // 这是 Python 吧？！
+        while True:
+            item = self.seq_item_port.get_next_item()
+            self.drive(item)
+
+    function drive(item):  // SV 里混 Python？
+        if item.direction == "READ":
+            self.vif.paddr = item.addr
+            // ...
 ```
 
 **我：？？？这是 UVM？**
@@ -3952,26 +2197,13 @@ UVM 里混杂了 Python 的 `def`、`self`、`while True`，还有一堆不伦�
 
 ```
 // 基础测试用例
-// 基础测试用例
-class
-class
- apb_basic_test
-extends
-extends
- uvm_test;
-// 1. 单次读操作
-// 1. 单次读操作
-// 2. 单次写操作
-// 2. 单次写操作
-// 3. 随机读写操作
-// 3. 随机读写操作
-// 4. 连续读（back-to-back read）
-// 4. 连续读（back-to-back read）
-// 5. 连续写（back-to-back write）
-// 5. 连续写（back-to-back write）
-// 6. 读写交替操作
-// 6. 读写交替操作
-endclass
+class apb_basic_test extends uvm_test;
+    // 1. 单次读操作
+    // 2. 单次写操作
+    // 3. 随机读写操作
+    // 4. 连续读（back-to-back read）
+    // 5. 连续写（back-to-back write）
+    // 6. 读写交替操作
 endclass
 ```
 
@@ -4011,128 +2243,22 @@ AI 开发的 UVC 终于能编译通过、仿真成功了。但是……实际操
 
 ```
 {
-"signal"
-"signal"
-: [
-    {
-"name"
-"name"
-:
-"PCLK"
-"PCLK"
-,
-"wave"
-"wave"
-:
-"p....."
-"p....."
-},
-    {
-"name"
-"name"
-:
-"PSEL"
-"PSEL"
-,
-"wave"
-"wave"
-:
-"01.0.."
-"01.0.."
-},
-    {
-"name"
-"name"
-:
-"PENABLE"
-"PENABLE"
-,
-"wave"
-"wave"
-:
-"0.10.."
-"0.10.."
-},
-    {
-"name"
-"name"
-:
-"PWRITE"
-"PWRITE"
-,
-"wave"
-"wave"
-:
-"0....."
-"0....."
-},
-    {
-"name"
-"name"
-:
-"PADDR"
-"PADDR"
-,
-"wave"
-"wave"
-:
-"x=x..."
-"x=x..."
-,
-"data"
-"data"
-: [
-"addr"
-"addr"
-]},
-    {
-"name"
-"name"
-:
-"PRDATA"
-"PRDATA"
-,
-"wave"
-"wave"
-:
-"x.=x.."
-"x.=x.."
-,
-"data"
-"data"
-: [
-"data"
-"data"
-]},
-    {
-"name"
-"name"
-:
-"PREADY"
-"PREADY"
-,
-"wave"
-"wave"
-:
-"x.10.."
-"x.10.."
-}
+  "signal": [
+    {"name": "PCLK",    "wave": "p....."},
+    {"name": "PSEL",    "wave": "01.0.."},
+    {"name": "PENABLE", "wave": "0.10.."},
+    {"name": "PWRITE",  "wave": "0....."},
+    {"name": "PADDR",   "wave": "x=x...", "data": ["addr"]},
+    {"name": "PRDATA",  "wave": "x.=x..", "data": ["data"]},
+    {"name": "PREADY",  "wave": "x.10.."}
   ],
-"config"
-"config"
-: {
-"hscale"
-"hscale"
-:
-2
-2
-}
+  "config": {"hscale": 2}
 }
 ```
 
 用这种格式，我可以把时序**精确地、结构化地**告诉 AI，而不是用一大段自然语言去描述。
 
-![](UVM_AI_assets/image-0073.png)
+![](UVM_AI_assets/image-0109.png)
 
 时序图效果
 
@@ -4176,32 +2302,12 @@ UVC 毕竟是给别人用的，需要满足一些工程规范：
 
 ```
 // ✅ DO: Use config to control active/passive
-// ✅ DO: Use config to control active/passive
-if
-if
- (cfg
-.is_active
-.is_active
- == UVM_ACTIVE)
-begin
-begin
-    drv = my_driver::type_id::create(
-"drv"
-"drv"
-,
-this
-this
-);
+if (cfg.is_active == UVM_ACTIVE) begin
+    drv = my_driver::type_id::create("drv", this);
 end
-end
+
 // ❌ DON'T: Use config_db for config within UVM hierarchy
-// ❌ DON'T: Use config_db for config within UVM hierarchy
-uvm_config_db
-#(int)::get(this, "", "is_active", is_active)
-#(int)::get(this, "", "is_active", is_active)
-;
-// WRONG
-// WRONG
+uvm_config_db#(int)::get(this, "", "is_active", is_active);  // WRONG
 ```
 
 但是这样一来，skill 的内容就变得非常大，很快就把上下文窗口占满了。UVC 迭代两轮，上下文就没了。
@@ -4245,19 +2351,11 @@ AI 不擅长什么？**保证代码结构的一致性、遵循复杂的规范。
 效果立竿见影——AI 生产出来的 UVC 非常符合我的预期了：
 
 ```
-#
-#
- 第一步：脚本生成 UVC 框架
- 第一步：脚本生成 UVC 框架
+# 第一步：脚本生成 UVC 框架
 python3 uvc_gen.py -n apb -m single -v v1.0 -o ./my_project
-#
-#
- 第二步：AI 填充时序和逻辑
- 第二步：AI 填充时序和逻辑
-#
-#
- 此时 AI 只需要关注 drive_trans() 和 rcv_data_phase() 的实现
- 此时 AI 只需要关注 drive_trans() 和 rcv_data_phase() 的实现
+
+# 第二步：AI 填充时序和逻辑
+# 此时 AI 只需要关注 drive_trans() 和 rcv_data_phase() 的实现
 ```
 
 脚本保证了代码结构、命名规范、TLM 连接等"骨架"部分的正确性，AI 只需要往里面填"肉"。
@@ -4289,9 +2387,8 @@ uvc\_gen 是一个 Python 脚本，支持生成常见的 UVM 组件框架：
 
 ```
 # 安装
-# 安装
 npx skills add HolmeXin2630/ic-verifier -g
-# 使用（自动调用 uvc_gen）
+
 # 使用（自动调用 uvc_gen）
 > /env-builder
 > Create an APB UVC with driver, monitor, and sequencer
@@ -4331,7 +2428,7 @@ npx skills add HolmeXin2630/ic-verifier -g
 
 在 TDD 开发过程中，你需要告知 AI 你所使用的 EDA 工具是什么（VCS、Xcelium、Questa 等），它会自动配置编译和仿真命令。
 
-![](UVM_AI_assets/image-0074.png)
+![](UVM_AI_assets/image-0110.png)
 
 ---
 
@@ -4400,8 +2497,7 @@ npx skills add HolmeXin2630/ic-verifier -g
 
 > 来源：https://mp.weixin.qq.com/s/Cslz1CgEFaVXG7DCPgAtfg
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 31
-> **已截图**
+> update 2026/08/22 21 : 05
 
 > 上篇介绍了非流水线双向driver。本篇继续介绍pipeline driver。
 
@@ -4422,37 +2518,45 @@ npx skills add HolmeXin2630/ic-verifier -g
 
 上篇的 AHB Driver 长这样：
 
-task run\_phase(uvm\_phase phase);
-    forever begin
-        seq\_item\_port.get\_next\_item(req);
-        drive\_transfer(req);                // 地址 phase + 数据 phase 串行完成
-        seq\_item\_port.item\_done(req);       // 用 req 作为 response 带回
-    end
+```
+task run_phase(uvm_phase phase);
+    forever begin
+        seq_item_port.get_next_item(req);
+        drive_transfer(req);                // 地址 phase + 数据 phase 串行完成
+        seq_item_port.item_done(req);       // 用 req 作为 response 带回
+    end
 endtask
+```
 
 一笔 transaction 的生命周期：
 
-get\_next\_item ──→ 驱动地址 ──→ 等HREADY ──→ 驱动/采样数据 ──→ item\_done(rsp)
-                                                                 │
-                  ┌──────────────────────────────────────────────┘
-                  ↓
-           取下一条 get\_next\_item
+```
+get_next_item ──→ 驱动地址 ──→ 等HREADY ──→ 驱动/采样数据 ──→ item_done(rsp)
+                                                                 │
+                  ┌──────────────────────────────────────────────┘
+                  ↓
+           取下一条 get_next_item
+```
 
 时序上每笔占两个周期，三笔就是六个：
 
-|  C1 |  C2 |  C3 |  C4 |  C5 |  C6 |
-clk  |\_/‾\\_|\_/‾\\_|\_/‾\\_|\_/‾\\_|\_/‾\\_|\_/‾\\_|
-addr |  A  |     |  B  |     |  C  |     |
-data |     |  A  |     |  B  |     |  C  |
+```
+     |  C1 |  C2 |  C3 |  C4 |  C5 |  C6 |
+clk  |_/‾\_|_/‾\_|_/‾\_|_/‾\_|_/‾\_|_/‾\_|
+addr |  A  |     |  B  |     |  C  |     |
+data |     |  A  |     |  B  |     |  C  |
+```
 
 问题很明显：**Cycle 2 驱动 TX\_A 的数据时，总线的地址通道是空闲的**——完全可以同时发 TX\_B 的地址。
 
 这就是流水线的思路——地址和数据 phase 重叠执行：
 
-|  C1 |  C2 |  C3 |  C4 |
-clk  |\_/‾\\_|\_/‾\\_|\_/‾\\_|\_/‾\\_|
-addr |  A  |  B  |  C  |     |
-data |     |  A  |  B  |  C  |
+```
+     |  C1 |  C2 |  C3 |  C4 |
+clk  |_/‾\_|_/‾\_|_/‾\_|_/‾\_|
+addr |  A  |  B  |  C  |     |
+data |     |  A  |  B  |  C  |
+```
 
 Cycle 2、3 里地址通道与数据通道同时有活：发 B 的地址时，A 的数据也在飞。3 笔传输只用 4 个周期，吞吐量提升了 50%。
 
@@ -4481,26 +2585,30 @@ Cycle 2、3 里地址通道与数据通道同时有活：发 B 的地址时，A 
 
 `get(req)` 正好满足这一点——它等价于 `get_next_item` + 立即 `item_done()`：
 
-![get_next_item + item_done 握手方式](UVM_AI_assets/image-0075.png)
+![get_next_item + item_done 握手方式](UVM_AI_assets/image-0117.png)
 
-seq\_item\_port.get(req);    // get\_next\_item + 立即 item\_done()，取完就放
-drive(req);                // 慢慢驱动，sequencer 已经释放了
+```
+seq_item_port.get(req);    // get_next_item + 立即 item_done()，取完就放
+drive(req);                // 慢慢驱动，sequencer 已经释放了
+```
 
 `get()` 取到 item 后立即释放 sequencer，没有机会通过 `item_done(rsp)` 同步携带 response。如果需要回传 response，走 `put(rsp)` 异步路径：
 
+```
 // Driver 端
-seq\_item\_port.get(req);              // 取 item + 立即释放 sequencer
+seq_item_port.get(req);              // 取 item + 立即释放 sequencer
 // ... 进入流水线，可能经过很多个周期 ...
-seq\_item\_port.put(rsp);              // 异步回传 response
+seq_item_port.put(rsp);              // 异步回传 response
 
 // Sequence 端
-start\_item(req);
-finish\_item(req);                    // 立即返回（driver 已经 get 了）
-get\_response(rsp);                   // 单独等 response
+start_item(req);
+finish_item(req);                    // 立即返回（driver 已经 get 了）
+get_response(rsp);                   // 单独等 response
+```
 
 这正是 pipeline 需要的模式：反正 response 在取下一笔时还不存在，不如取了就放，数据阶段完成后再单独 `put(rsp)` 回传。
 
-![get() + put(rsp) 握手方式](UVM_AI_assets/image-0076.png)
+![get() + put(rsp) 握手方式](UVM_AI_assets/image-0118.png)
 
 ### 9.2.4 两种握手方式对比
 
@@ -4519,15 +2627,17 @@ get\_response(rsp);                   // 单独等 response
 
 用一句话概括：**`get(req)` 取完就放，clone 后入管，各级并行跑。**
 
-sequencer ──── get(req) ────→ 取 item
-       │                               │
-       │                         clone = req.clone()
-       │                               │
-       └── 回到循环取下一笔              ├─→ 流水级 1：驱动地址 phase
-                                       │        └─→ req\_mb.put(clone)
-                                       │
-                                       └─→ 流水级 2：驱动数据 phase
-                                                └─→ put(rsp) 异步回传
+```
+  sequencer ──── get(req) ────→ 取 item
+       │                               │
+       │                         clone = req.clone()
+       │                               │
+       └── 回到循环取下一笔              ├─→ 流水级 1：驱动地址 phase
+                                       │        └─→ req_mb.put(clone)
+                                       │
+                                       └─→ 流水级 2：驱动数据 phase
+                                                └─→ put(rsp) 异步回传
+```
 
 三个关键动作：
 
@@ -4545,73 +2655,77 @@ sequencer ──── get(req) ────→ 取 item
 
 先用一个极简的两阶段协议看骨架，不绑定具体总线：
 
-class pipeline\_driver extends uvm\_driver #(my\_transaction);
-    `uvm\_component\_utils(pipeline\_driver)
+```
+class pipeline_driver extends uvm_driver #(my_transaction);
+    `uvm_component_utils(pipeline_driver)
 
-    virtual my\_if vif;
-    mailbox #(my\_transaction) pipe\_mb = new(1);  // 容量 1：单级流水
+    virtual my_if vif;
+    mailbox #(my_transaction) pipe_mb = new(1);  // 容量 1：单级流水
 
-    task run\_phase(uvm\_phase phase);
-        fork
-            get\_and\_drive();   // 取 item + 地址阶段
-            data\_phase();      // 数据阶段
-        join
-    endtask
+    task run_phase(uvm_phase phase);
+        fork
+            get_and_drive();   // 取 item + 地址阶段
+            data_phase();      // 数据阶段
+        join
+    endtask
 
-    // ---- 线程 1：取 item + 地址阶段 ----
-    task get\_and\_drive();
-        my\_transaction clone;
-        forever begin
-            seq\_item\_port.get(req);            // get() = get\_next\_item + 立即 item\_done
-            $cast(clone, req.clone());         // clone：避免句柄覆盖
+    // ---- 线程 1：取 item + 地址阶段 ----
+    task get_and_drive();
+        my_transaction clone;
+        forever begin
+            seq_item_port.get(req);            // get() = get_next_item + 立即 item_done
+            $cast(clone, req.clone());         // clone：避免句柄覆盖
 
-            // 驱动地址
-            @(posedge vif.clk);
-            vif.addr  <= clone.addr;
-            vif.cmd   <= clone.cmd;
-            vif.valid <= 1'b1;
-            @(posedge vif.clk iff vif.ready);
-            vif.valid <= 1'b0;
+            // 驱动地址
+            @(posedge vif.clk);
+            vif.addr  <= clone.addr;
+            vif.cmd   <= clone.cmd;
+            vif.valid <= 1'b1;
+            @(posedge vif.clk iff vif.ready);
+            vif.valid <= 1'b0;
 
-            // 地址阶段结束，传给数据阶段
-            pipe\_mb.put(clone);
-            // 不等数据阶段，立刻进入下一次 get()
-        end
-    endtask
+            // 地址阶段结束，传给数据阶段
+            pipe_mb.put(clone);
+            // 不等数据阶段，立刻进入下一次 get()
+        end
+    endtask
 
-    // ---- 线程 2：数据阶段 + 回传 response ----
-    task data\_phase();
-        my\_transaction tr, rsp;
-        forever begin
-            pipe\_mb.get(tr);                   // 阻塞等到有 item
+    // ---- 线程 2：数据阶段 + 回传 response ----
+    task data_phase();
+        my_transaction tr, rsp;
+        forever begin
+            pipe_mb.get(tr);                   // 阻塞等到有 item
 
-            if (tr.cmd == WRITE) begin
-                @(posedge vif.clk);
-                vif.wdata <= tr.wdata;
-                @(posedge vif.clk iff vif.wready);
-            end else begin
-                @(posedge vif.clk iff vif.rvalid);
-                tr.rdata = vif.rdata;
-            end
+            if (tr.cmd == WRITE) begin
+                @(posedge vif.clk);
+                vif.wdata <= tr.wdata;
+                @(posedge vif.clk iff vif.wready);
+            end else begin
+                @(posedge vif.clk iff vif.rvalid);
+                tr.rdata = vif.rdata;
+            end
 
-            // 异步回传 response
-            $cast(rsp, tr.clone());
-            rsp.set\_id\_info(tr);               // 绑定 ID
-            seq\_item\_port.put(rsp);            // 异步回传
-        end
-    endtask
+            // 异步回传 response
+            $cast(rsp, tr.clone());
+            rsp.set_id_info(tr);               // 绑定 ID
+            seq_item_port.put(rsp);            // 异步回传
+        end
+    endtask
 endclass
+```
 
 `pipe_mb = new(1)` 容量为 1——地址线程放入第二笔时，如果数据线程还没取走第一笔，地址线程会阻塞。天然建模**单级流水**：地址最多领先数据一拍。
 
 时序：
 
-| C1   | C2   | C3   | C4   |
-get\_and\_drive   | addrA| addrB| addrC|      |
-data\_phase      |      | dataA| dataB| dataC|
+```
+                | C1   | C2   | C3   | C4   |
+get_and_drive   | addrA| addrB| addrC|      |
+data_phase      |      | dataA| dataB| dataC|
 ----------------+------+------+------+------+
-bus addr        | A    | B    | C    |      |
-bus data        |      | A    | B    | C    |
+bus addr        | A    | B    | C    |      |
+bus data        |      | A    | B    | C    |
+```
 
 Cycle 2 起，`get_and_drive` 在发下一笔地址，`data_phase` 同时处理上一笔数据——线程并行、通道重叠，这就是 pipeline。
 
@@ -4625,127 +2739,133 @@ Cycle 2 起，`get_and_drive` 在发下一笔地址，`data_phase` 同时处�
 
 第 3 篇把地址和数据塞在同一个 `drive_transfer()` 里。改造的核心思路：拆成两个线程。
 
-线程 1 (get\_and\_drive)         线程 2 (drive\_transfers)
-        │                                  │
-   get(req)                                │
-        │                                  │
-   clone(req)                              │
-        │                                  │
-   outstanding\_cnt++                       │
-        │                                  │
-   驱动地址 phase                           │
-        │                                  │
-   req\_mb.put(clone) ────→ req\_mb.get(tr) ─┤
-                                           │
-                                     驱动数据 phase
-                                           │
-                                     put(rsp) 异步回传
-                                           │
-                                     outstanding\_cnt--
+```
+线程 1 (get_and_drive)         线程 2 (drive_transfers)
+        │                                  │
+   get(req)                                │
+        │                                  │
+   clone(req)                              │
+        │                                  │
+   outstanding_cnt++                       │
+        │                                  │
+   驱动地址 phase                           │
+        │                                  │
+   req_mb.put(clone) ────→ req_mb.get(tr) ─┤
+                                           │
+                                     驱动数据 phase
+                                           │
+                                     put(rsp) 异步回传
+                                           │
+                                     outstanding_cnt--
+```
 
-class ahb\_pipeline\_driver extends uvm\_driver #(ahb\_transaction);
-    `uvm\_component\_utils(ahb\_pipeline\_driver)
+```
+class ahb_pipeline_driver extends uvm_driver #(ahb_transaction);
+    `uvm_component_utils(ahb_pipeline_driver)
 
-    virtual ahb\_if vif;
-    ahb\_config       cfg;
+    virtual ahb_if vif;
+    ahb_config       cfg;
 
-    // 流水级间传递
-    mailbox #(ahb\_transaction) req\_mb = new();
+    // 流水级间传递
+    mailbox #(ahb_transaction) req_mb = new();
 
-    // outstanding 控制
-    int unsigned outstanding\_cnt = 0;
+    // outstanding 控制
+    int unsigned outstanding_cnt = 0;
 
-    function new(string name, uvm\_component parent);
-        super.new(name, parent);
-    endfunction
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
 
-    function void build\_phase(uvm\_phase phase);
-        super.build\_phase(phase);
-        if (!uvm\_config\_db #(ahb\_config)::get(this, "", "cfg", cfg))
-            `uvm\_fatal("DRV", "Failed to get config")
-        if (!uvm\_config\_db #(virtual ahb\_if)::get(this, "", "vif", vif))
-            `uvm\_fatal("DRV", "Failed to get vif")
-    endfunction
+    function void build_phase(uvm_phase phase);
+        super.build_phase(phase);
+        if (!uvm_config_db #(ahb_config)::get(this, "", "cfg", cfg))
+            `uvm_fatal("DRV", "Failed to get config")
+        if (!uvm_config_db #(virtual ahb_if)::get(this, "", "vif", vif))
+            `uvm_fatal("DRV", "Failed to get vif")
+    endfunction
 
-    task run\_phase(uvm\_phase phase);
-        fork
-            get\_and\_drive();
-            drive\_transfers();
-        join
-    endtask
+    task run_phase(uvm_phase phase);
+        fork
+            get_and_drive();
+            drive_transfers();
+        join
+    endtask
 
-    //----------------------------------------------
-    // 线程 1：取 item + 驱动地址 phase
-    //----------------------------------------------
-    task get\_and\_drive();
-        ahb\_transaction clone;
-        forever begin
-            wait(outstanding\_cnt < cfg.max\_outstanding);  // outstanding 控制
+    //----------------------------------------------
+    // 线程 1：取 item + 驱动地址 phase
+    //----------------------------------------------
+    task get_and_drive();
+        ahb_transaction clone;
+        forever begin
+            wait(outstanding_cnt < cfg.max_outstanding);  // outstanding 控制
 
-            seq\_item\_port.get(req);               // get()：取完立即释放 sequencer
-            $cast(clone, req.clone());
-            outstanding\_cnt++;
+            seq_item_port.get(req);               // get()：取完立即释放 sequencer
+            $cast(clone, req.clone());
+            outstanding_cnt++;
 
-            // ---- 驱动地址 phase ----
-            @(posedge vif.HCLK);
-            vif.HADDR  <= clone.addr;
-            vif.HTRANS <= clone.trans;
-            vif.HWRITE <= clone.write;
-            vif.HSIZE  <= clone.size;
-            vif.HBURST <= clone.burst;
+            // ---- 驱动地址 phase ----
+            @(posedge vif.HCLK);
+            vif.HADDR  <= clone.addr;
+            vif.HTRANS <= clone.trans;
+            vif.HWRITE <= clone.write;
+            vif.HSIZE  <= clone.size;
+            vif.HBURST <= clone.burst;
 
-            while (!vif.HREADY) @(posedge vif.HCLK);
+            while (!vif.HREADY) @(posedge vif.HCLK);
 
-            req\_mb.put(clone);
-        end
-    endtask
+            req_mb.put(clone);
+        end
+    endtask
 
-    //----------------------------------------------
-    // 线程 2：驱动数据 phase + 回传 response
-    //----------------------------------------------
-    task drive\_transfers();
-        ahb\_transaction tr, rsp;
-        forever begin
-            req\_mb.get(tr);
+    //----------------------------------------------
+    // 线程 2：驱动数据 phase + 回传 response
+    //----------------------------------------------
+    task drive_transfers();
+        ahb_transaction tr, rsp;
+        forever begin
+            req_mb.get(tr);
 
-            // ---- 驱动数据 phase ----
-            // 写操作：驱动 HWDATA，等待 HREADY
-            if (tr.write) begin
-                @(posedge vif.HCLK);
-                vif.HWDATA <= tr.data;
-                while (!vif.HREADY) @(posedge vif.HCLK);
-            end
-            // 读操作：等待 HREADY，采样 HRDATA
-            else begin
-                @(posedge vif.HCLK);
-                while (!vif.HREADY) @(posedge vif.HCLK);
-                tr.data = vif.HRDATA;
-            end
+            // ---- 驱动数据 phase ----
+            // 写操作：驱动 HWDATA，等待 HREADY
+            if (tr.write) begin
+                @(posedge vif.HCLK);
+                vif.HWDATA <= tr.data;
+                while (!vif.HREADY) @(posedge vif.HCLK);
+            end
+            // 读操作：等待 HREADY，采样 HRDATA
+            else begin
+                @(posedge vif.HCLK);
+                while (!vif.HREADY) @(posedge vif.HCLK);
+                tr.data = vif.HRDATA;
+            end
 
-            // ---- 异步回传 response ----
-            // 顺序响应场景：数据 phase 完成后直接回传
-            // 乱序响应场景见下篇：放入 pending\_q，由 collect\_rsp 按 ID 匹配
-            $cast(rsp, tr.clone());
-            rsp.set\_id\_info(tr);
-            seq\_item\_port.put(rsp);
+            // ---- 异步回传 response ----
+            // 顺序响应场景：数据 phase 完成后直接回传
+            // 乱序响应场景见下篇：放入 pending_q，由 collect_rsp 按 ID 匹配
+            $cast(rsp, tr.clone());
+            rsp.set_id_info(tr);
+            seq_item_port.put(rsp);
 
-            outstanding\_cnt--;
-        end
-    endtask
+            outstanding_cnt--;
+        end
+    endtask
 
 endclass
+```
 
 #### 9.3.3.2 Outstanding 深度控制
 
 双线程跑起来之后，`get_and_drive` 发地址的速度可能远快于 `drive_transfers` 处理数据的速度。如果不加限制：
 
-get\_and\_drive               req\_mb               DUT
-       │                       (无限)                │
-       ├─ get+clone ──→ put ──→ [T1,T2,...,T100]    │
-       ├─ get+clone ──→ put ──→ 100个排队            │
-       ├─ ...                                        │
-       │                                             │
-       │                     但DUT只能处理4笔 ────→ 缓冲区溢出！
+```
+  get_and_drive               req_mb               DUT
+       │                       (无限)                │
+       ├─ get+clone ──→ put ──→ [T1,T2,...,T100]    │
+       ├─ get+clone ──→ put ──→ 100个排队            │
+       ├─ ...                                        │
+       │                                             │
+       │                     但DUT只能处理4笔 ────→ 缓冲区溢出！
+```
 
 所以需要 **Outstanding 控制**——限制"已发出但未收到响应"的事务数量。
 
@@ -4755,17 +2875,19 @@ get\_and\_drive               req\_mb               DUT
 
 通过 config object 让 outstanding 深度可配置：
 
-class ahb\_config extends uvm\_object;
-    `uvm\_object\_utils(ahb\_config)
+```
+class ahb_config extends uvm_object;
+    `uvm_object_utils(ahb_config)
 
-    virtual ahb\_if             vif;
-    uvm\_active\_passive\_enum    is\_active = UVM\_ACTIVE;
-    int unsigned               max\_outstanding = 4;   // ⬅ 新增
+    virtual ahb_if             vif;
+    uvm_active_passive_enum    is_active = UVM_ACTIVE;
+    int unsigned               max_outstanding = 4;   // ⬅ 新增
 
-    function new(string name = "ahb\_config");
-        super.new(name);
-    endfunction
+    function new(string name = "ahb_config");
+        super.new(name);
+    endfunction
 endclass
+```
 
 - `max_outstanding = 1`
 
@@ -4779,39 +2901,41 @@ endclass
 
 #### 9.3.3.4 验证 sequence
 
-class ahb\_pipeline\_stress\_seq extends uvm\_sequence #(ahb\_transaction);
-    `uvm\_object\_utils(ahb\_pipeline\_stress\_seq)
+```
+class ahb_pipeline_stress_seq extends uvm_sequence #(ahb_transaction);
+    `uvm_object_utils(ahb_pipeline_stress_seq)
 
-    int num\_txns = 20;
+    int num_txns = 20;
 
-    function new(string name = "ahb\_pipeline\_stress\_seq");
-        super.new(name);
-    endfunction
+    function new(string name = "ahb_pipeline_stress_seq");
+        super.new(name);
+    endfunction
 
-    task body();
-        ahb\_transaction req, rsp;
+    task body();
+        ahb_transaction req, rsp;
 
-        // 用 fork...join\_none 并发发送请求，批量等待响应
-        fork
-            // 发送线程：连续发请求，不等响应
-            repeat (num\_txns) begin
-                req = ahb\_transaction::type\_id::create("req");
-                start\_item(req);
-                assert(req.randomize() with {
-                    id inside {[0:3]};
-                });
-                finish\_item(req);         // 立即返回（driver 用了 get()，sequencer 已释放）
-            end
-        
-            // 接收线程：批量等待响应
-            repeat (num\_txns) begin
-                get\_response(rsp);        // 单独等 response
-                `uvm\_info("SEQ", $sformatf("Got rsp: id=%0d, addr=0x%0h, data=0x%0h",
-                    rsp.id, rsp.addr, rsp.data), UVM\_MEDIUM)
-            end
-        join
-    endtask
+        // 用 fork...join_none 并发发送请求，批量等待响应
+        fork
+            // 发送线程：连续发请求，不等响应
+            repeat (num_txns) begin
+                req = ahb_transaction::type_id::create("req");
+                start_item(req);
+                assert(req.randomize() with {
+                    id inside {[0:3]};
+                });
+                finish_item(req);         // 立即返回（driver 用了 get()，sequencer 已释放）
+            end
+
+            // 接收线程：批量等待响应
+            repeat (num_txns) begin
+                get_response(rsp);        // 单独等 response
+                `uvm_info("SEQ", $sformatf("Got rsp: id=%0d, addr=0x%0h, data=0x%0h",
+                    rsp.id, rsp.addr, rsp.data), UVM_MEDIUM)
+            end
+        join
+    endtask
 endclass
+```
 
 关键点：
 
@@ -4855,29 +2979,33 @@ endclass
 
 `req` 是 sequencer 内部的一个句柄。每次 `get(req)` 返回时，sequencer 会把 `req` 指向下一个可用的 transaction。如果不 clone 就直接放进 mailbox：
 
+```
 ❌ 不 clone（Bug 场景）：
 
-  Iter 1                        Iter 2
-    │                             │
-  get(req) → req → TX\_A        get(req) → req → TX\_B
-                   │                          │
-             mailbox.put(req)           req 被覆盖!
-                   │                          │
-             存的是引用 ──────────────→ mailbox里也变成TX\_B!
+  Iter 1                        Iter 2
+    │                             │
+  get(req) → req → TX_A        get(req) → req → TX_B
+                   │                          │
+             mailbox.put(req)           req 被覆盖!
+                   │                          │
+             存的是引用 ──────────────→ mailbox里也变成TX_B!
+```
 
 **clone 创建独立副本**，后续对 `req` 的覆盖不影响副本。
 
+```
 ✅ 正确 clone：
 
-  Iter 1                        Iter 2
-    │                             │
-  get(req) → req → TX\_A        get(req) → req → TX\_B
-                   │                          │
-             clone=req.clone()           req 被覆盖
-                   │                          │
-             clone→TX\_A(独立副本)        但clone不受影响
-                   │
-             mailbox.put(clone) → TX\_A 保持不变
+  Iter 1                        Iter 2
+    │                             │
+  get(req) → req → TX_A        get(req) → req → TX_B
+                   │                          │
+             clone=req.clone()           req 被覆盖
+                   │                          │
+             clone→TX_A(独立副本)        但clone不受影响
+                   │
+             mailbox.put(clone) → TX_A 保持不变
+```
 
 ### 9.4.2 set\_id\_info 为什么是必需的
 
@@ -4885,23 +3013,25 @@ endclass
 
 一个 sequencer 上可能同时跑着多个 sequence：
 
-┌─────────────────────────────────────┐
-                 │            Sequencer                 │
-                 │  ┌──────────────┐  ┌──────────────┐ │
-                 │  │    seq\_A     │  │    seq\_B     │ │
-                 │  │ req\_1, req\_2 │  │ req\_3, req\_4 │ │
-                 │  └──────────────┘  └──────────────┘ │
-                 └─────────────────────────────────────┘
-                                   │
-                           put(rsp) 回传
-                                   │
-                 ┌─────────────────┴─────────────────┐
-                 │                                   │
-           这个response给seq\_A?              还是给seq\_B?
-                 │                                   │
-                 └─────────────────┬─────────────────┘
-                                   │
-                           靠rsp上的ID判断!
+```
+                 ┌─────────────────────────────────────┐
+                 │            Sequencer                 │
+                 │  ┌──────────────┐  ┌──────────────┐ │
+                 │  │    seq_A     │  │    seq_B     │ │
+                 │  │ req_1, req_2 │  │ req_3, req_4 │ │
+                 │  └──────────────┘  └──────────────┘ │
+                 └─────────────────────────────────────┘
+                                   │
+                           put(rsp) 回传
+                                   │
+                 ┌─────────────────┴─────────────────┐
+                 │                                   │
+           这个response给seq_A?              还是给seq_B?
+                 │                                   │
+                 └─────────────────┬─────────────────┘
+                                   │
+                           靠rsp上的ID判断!
+```
 
 - **`item_done(rsp)`**
 
@@ -4910,28 +3040,30 @@ endclass
 
   ：**必须**手动 `set_id_info`——已脱离上下文，sequencer 没有隐式信息。漏了这一步，sequence 端 `get_response()` 永远阻塞
 
-✅ 有 set\_id\_info：
-  driver put(rsp) ──→ rsp 携带 sequence\_id + transaction\_id
-                            │
-                            ↓
-                   sequencer 根据 ID 路由
-                            │
-                    ┌───────┴───────┐
-                    ↓               ↓
-                  seq\_A           seq\_B
-                    │               │
-              get\_response()  get\_response()
-                    ↓               ↓
-                   收到 ✅          收到 ✅
+```
+✅ 有 set_id_info：
+  driver put(rsp) ──→ rsp 携带 sequence_id + transaction_id
+                            │
+                            ↓
+                   sequencer 根据 ID 路由
+                            │
+                    ┌───────┴───────┐
+                    ↓               ↓
+                  seq_A           seq_B
+                    │               │
+              get_response()  get_response()
+                    ↓               ↓
+                   收到 ✅          收到 ✅
 
-❌ 没有 set\_id\_info：
-  driver put(rsp) ──→ rsp 没有 ID 信息
-                            │
-                            ↓
-                   sequencer 不知道路由给谁
-                            │
-                            ↓
-                   get\_response() 永久阻塞 ❌
+❌ 没有 set_id_info：
+  driver put(rsp) ──→ rsp 没有 ID 信息
+                            │
+                            ↓
+                   sequencer 不知道路由给谁
+                            │
+                            ↓
+                   get_response() 永久阻塞 ❌
+```
 
 ### 9.4.3 mailbox vs queue
 
@@ -5000,8 +3132,7 @@ Pipeline 需要在线程间传递 transaction。两种选择：
 
 > 来源：https://mp.weixin.qq.com/s/MrhfFlTGbW9MJBf0HN7deA
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 31
-> **已截图**
+> update 2026/08/22 21 : 05
 
 > 上篇实现了 Pipeline Driver，假设响应按 FIFO 顺序返回。真实协议中还有另一种响应模式：乱序返回。实现上只需在 pipeline 基础加上 ID 匹配。
 
@@ -5039,7 +3170,7 @@ Pipeline 需要在线程间传递 transaction。两种选择：
 
 多 ID 协议中，不同 ID 的请求可能走不同内部路径，延迟不同，后发的可能先回来：
 
-![乱序响应时序](UVM_AI_assets/image-0077.jpg)
+![乱序响应时序](UVM_AI_assets/image-0119.jpg)
 
 关键规则：**相同 ID 的事务必须保序，不同 ID 可以乱序。**
 
@@ -5051,7 +3182,7 @@ Pipeline 需要在线程间传递 transaction。两种选择：
 
 Pipeline driver 的架构不变——三个线程、mailbox 传递、outstanding 控制。唯一的改动在响应收集端：
 
-![Pipeline vs Out-of-Order](UVM_AI_assets/image-0078.jpg)
+![Pipeline vs Out-of-Order](UVM_AI_assets/image-0120.jpg)
 
 ---
 
@@ -5065,7 +3196,7 @@ Pipeline driver 的架构不变——三个线程、mailbox 传递、outstanding
 
 当 ID=A 的第一个响应到来时，`foreach` 从头扫，命中 index 0 的 req\_0——正好是最先发出的那笔。**FIFO 顺序自然保持。**
 
-![foreach 匹配过程](UVM_AI_assets/image-0079.jpg)
+![foreach 匹配过程](UVM_AI_assets/image-0121.jpg)
 
 ### 10.3.2 匹配后的处理流程
 
@@ -5081,31 +3212,35 @@ Pipeline driver 的架构不变——三个线程、mailbox 传递、outstanding
 
 5. `delete(i)` 从队列中移除，`outstanding_cnt--`
 
-foreach (pending\_q[i]) begin
-    if (pending\_q[i].id == vif.rsp\_id) begin
-        // 1. 填入响应数据
-        pending\_q[i].rdata  = vif.rdata;
-        pending\_q[i].status = vif.rsp\_status;
+```
+foreach (pending_q[i]) begin
+    if (pending_q[i].id == vif.rsp_id) begin
+        // 1. 填入响应数据
+        pending_q[i].rdata  = vif.rdata;
+        pending_q[i].status = vif.rsp_status;
 
-        // 2-4. clone + set\_id\_info + put
-        $cast(rsp, pending\_q[i].clone());
-        rsp.set\_id\_info(pending\_q[i]);
-        seq\_item\_port.put(rsp);
+        // 2-4. clone + set_id_info + put
+        $cast(rsp, pending_q[i].clone());
+        rsp.set_id_info(pending_q[i]);
+        seq_item_port.put(rsp);
 
-        // 5. 清理
-        pending\_q.delete(i);
-        outstanding\_cnt--;
-        break;
-    end
+        // 5. 清理
+        pending_q.delete(i);
+        outstanding_cnt--;
+        break;
+    end
 end
+```
 
 ### 10.3.3 防御：匹配失败
 
 如果 `foreach` 走完都没找到匹配项，说明收到了一个"凭空出现"的响应 ID——通常是 DUT bug 或 VIP 的 ID 管理有误：
 
-if (found == -1)
-    `uvm\_fatal("OOO\_DRV", $sformatf(
-        "No pending request for response ID=%0d", vif.rsp\_id))
+```
+if (found == -1)
+    `uvm_fatal("OOO_DRV", $sformatf(
+        "No pending request for response ID=%0d", vif.rsp_id))
+```
 
 `uvm_fatal` 而非 `uvm_error`——继续运行没有意义，数据已经不可信。
 
@@ -5135,217 +3270,221 @@ if (found == -1)
 >
 > AXI 的读响应（R 通道）和写响应（B 通道）是独立的，可能同时到达。用一个线程收集会丢掉另一个通道的响应。拆成两个线程各监听一个通道，互不干扰。
 
-![五线程架构](UVM_AI_assets/image-0080.jpg)
+![五线程架构](UVM_AI_assets/image-0122.jpg)
 
 ### 10.4.2 完整 Driver 代码
 
-class full\_pipeline\_driver extends uvm\_driver #(my\_transaction);
-`uvm\_component\_utils(full\_pipeline\_driver)
+```
+class full_pipeline_driver extends uvm_driver #(my_transaction);
+`uvm_component_utils(full_pipeline_driver)
 
-virtual my\_if vif;
-  my\_config     cfg;
+virtual my_if vif;
+  my_config     cfg;
 
 // 流水级间传递
-mailbox #(my\_transaction) req\_mb  = new();    // get → 地址阶段
-mailbox #(my\_transaction) data\_mb = new(1);   // 地址 → 数据：容量 1，单级流水
+mailbox #(my_transaction) req_mb  = new();    // get → 地址阶段
+mailbox #(my_transaction) data_mb = new(1);   // 地址 → 数据：容量 1，单级流水
 
 // in-flight 事务队列（读写共用，匹配时同时检查 id 和 cmd）
-  my\_transaction pending\_q[$];
+  my_transaction pending_q[$];
 
 // outstanding 控制
-int unsigned outstanding\_cnt = 0;
+int unsigned outstanding_cnt = 0;
 
-function new(string name, uvm\_component parent);
-    super.new(name, parent);
+function new(string name, uvm_component parent);
+    super.new(name, parent);
 endfunction
 
-function void build\_phase(uvm\_phase phase);
-    super.build\_phase(phase);
-    if (!uvm\_config\_db #(my\_config)::get(this, "", "cfg", cfg))
-      `uvm\_fatal("CFG", "Failed to get config")
+function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db #(my_config)::get(this, "", "cfg", cfg))
+      `uvm_fatal("CFG", "Failed to get config")
 endfunction
 
-task run\_phase(uvm\_phase phase);
-    fork
-      get\_and\_drive();
-      drive\_addr();
-      drive\_data();
-      collect\_read\_rsp();
-      collect\_write\_rsp();
-    join
+task run_phase(uvm_phase phase);
+    fork
+      get_and_drive();
+      drive_addr();
+      drive_data();
+      collect_read_rsp();
+      collect_write_rsp();
+    join
 endtask
 
 //----------------------------------------------
 // 线程 1：从 sequencer 取 item，控制 outstanding
 //----------------------------------------------
-task get\_and\_drive();
-    my\_transaction clone;
-    forever begin
-      wait(outstanding\_cnt < cfg.max\_outstanding);
-      seq\_item\_port.get(req);             // get：取到即释放
-      $cast(clone, req.clone());
-      outstanding\_cnt++;
-      req\_mb.put(clone);
-    end
+task get_and_drive();
+    my_transaction clone;
+    forever begin
+      wait(outstanding_cnt < cfg.max_outstanding);
+      seq_item_port.get(req);             // get：取到即释放
+      $cast(clone, req.clone());
+      outstanding_cnt++;
+      req_mb.put(clone);
+    end
 endtask
 
 //----------------------------------------------
 // 线程 2：驱动地址阶段
 //----------------------------------------------
-task drive\_addr();
-    my\_transaction tr;
-    forever begin
-      req\_mb.get(tr);
+task drive_addr();
+    my_transaction tr;
+    forever begin
+      req_mb.get(tr);
 
-      @(posedge vif.clk);
-      vif.arvalid <= 1'b1;
-      vif.araddr  <= tr.addr;
-      vif.arid    <= tr.id;
-      vif.arlen   <= tr.len;
+      @(posedge vif.clk);
+      vif.arvalid <= 1'b1;
+      vif.araddr  <= tr.addr;
+      vif.arid    <= tr.id;
+      vif.arlen   <= tr.len;
 
-      @(posedge vif.clk iff vif.arready);
-      vif.arvalid <= 1'b0;
+      @(posedge vif.clk iff vif.arready);
+      vif.arvalid <= 1'b0;
 
-      // 地址阶段结束，交给数据阶段；本线程可立刻处理下一笔地址
-      data\_mb.put(tr);
-    end
+      // 地址阶段结束，交给数据阶段；本线程可立刻处理下一笔地址
+      data_mb.put(tr);
+    end
 endtask
 
 //----------------------------------------------
 // 线程 3：驱动数据阶段（写走 W 通道），再进入 pending
 //----------------------------------------------
-task drive\_data();
-    my\_transaction tr;
-    forever begin
-      data\_mb.get(tr);
+task drive_data();
+    my_transaction tr;
+    forever begin
+      data_mb.get(tr);
 
-      if (tr.cmd == WRITE) begin
-        @(posedge vif.clk);
-        vif.wvalid <= 1'b1;
-        vif.wdata  <= tr.wdata;
-        vif.wstrb  <= tr.wstrb;
-        @(posedge vif.clk iff vif.wready);
-        vif.wvalid <= 1'b0;
-      end
-      // 读：不在这里等 rdata——响应可能乱序，由 collect\_read\_rsp 按 ID 匹配
+      if (tr.cmd == WRITE) begin
+        @(posedge vif.clk);
+        vif.wvalid <= 1'b1;
+        vif.wdata  <= tr.wdata;
+        vif.wstrb  <= tr.wstrb;
+        @(posedge vif.clk iff vif.wready);
+        vif.wvalid <= 1'b0;
+      end
+      // 读：不在这里等 rdata——响应可能乱序，由 collect_read_rsp 按 ID 匹配
 
-      // 请求侧已完成，放入 pending 等待响应
-      pending\_q.push\_back(tr);
-    end
+      // 请求侧已完成，放入 pending 等待响应
+      pending_q.push_back(tr);
+    end
 endtask
 
 //----------------------------------------------
 // 线程 4：收集读响应（R 通道），乱序匹配
 //----------------------------------------------
-task collect\_read\_rsp();
-    forever begin
-      @(posedge vif.clk iff vif.rvalid);
+task collect_read_rsp();
+    forever begin
+      @(posedge vif.clk iff vif.rvalid);
 
-      begin
-        int found = -1;
-        foreach (pending\_q[i]) begin
-          if (pending\_q[i].id == vif.rid && pending\_q[i].cmd == READ) begin
-            found = i;
-            break;
-          end
-        end
+      begin
+        int found = -1;
+        foreach (pending_q[i]) begin
+          if (pending_q[i].id == vif.rid && pending_q[i].cmd == READ) begin
+            found = i;
+            break;
+          end
+        end
 
-        if (found == -1)
-          `uvm\_fatal("FULL\_DRV", $sformatf("Unexpected R response, ID=%0d", vif.rid))
+        if (found == -1)
+          `uvm_fatal("FULL_DRV", $sformatf("Unexpected R response, ID=%0d", vif.rid))
 
-        // 填入读响应数据
-        pending\_q[found].rdata = vif.rdata;
-        pending\_q[found].rresp = vif.rresp;
+        // 填入读响应数据
+        pending_q[found].rdata = vif.rdata;
+        pending_q[found].rresp = vif.rresp;
 
-        // 回传给 sequence
-        begin
-          my\_transaction rsp;
-          $cast(rsp, pending\_q[found].clone());
-          rsp.set\_id\_info(pending\_q[found]);
-          seq\_item\_port.put(rsp);
-        end
+        // 回传给 sequence
+        begin
+          my_transaction rsp;
+          $cast(rsp, pending_q[found].clone());
+          rsp.set_id_info(pending_q[found]);
+          seq_item_port.put(rsp);
+        end
 
-        // 清理
-        pending\_q.delete(found);
-        outstanding\_cnt--;
-      end
-    end
+        // 清理
+        pending_q.delete(found);
+        outstanding_cnt--;
+      end
+    end
 endtask
 
 //----------------------------------------------
 // 线程 5：收集写响应（B 通道），乱序匹配
 //----------------------------------------------
-task collect\_write\_rsp();
-    forever begin
-      @(posedge vif.clk iff vif.bvalid);
+task collect_write_rsp();
+    forever begin
+      @(posedge vif.clk iff vif.bvalid);
 
-      begin
-        int found = -1;
-        foreach (pending\_q[i]) begin
-          if (pending\_q[i].id == vif.bid && pending\_q[i].cmd == WRITE) begin
-            found = i;
-            break;
-          end
-        end
+      begin
+        int found = -1;
+        foreach (pending_q[i]) begin
+          if (pending_q[i].id == vif.bid && pending_q[i].cmd == WRITE) begin
+            found = i;
+            break;
+          end
+        end
 
-        if (found == -1)
-          `uvm\_fatal("FULL\_DRV", $sformatf("Unexpected B response, ID=%0d", vif.bid))
+        if (found == -1)
+          `uvm_fatal("FULL_DRV", $sformatf("Unexpected B response, ID=%0d", vif.bid))
 
-        // 填入写响应
-        pending\_q[found].bresp = vif.bresp;
+        // 填入写响应
+        pending_q[found].bresp = vif.bresp;
 
-        // 回传给 sequence
-        begin
-          my\_transaction rsp;
-          $cast(rsp, pending\_q[found].clone());
-          rsp.set\_id\_info(pending\_q[found]);
-          seq\_item\_port.put(rsp);
-        end
+        // 回传给 sequence
+        begin
+          my_transaction rsp;
+          $cast(rsp, pending_q[found].clone());
+          rsp.set_id_info(pending_q[found]);
+          seq_item_port.put(rsp);
+        end
 
-        // 清理
-        pending\_q.delete(found);
-        outstanding\_cnt--;
-      end
-    end
+        // 清理
+        pending_q.delete(found);
+        outstanding_cnt--;
+      end
+    end
 endtask
 
 endclass
+```
 
 ### 10.4.3 对应的 Sequence 写法
 
-class ooo\_sequence extends uvm\_sequence #(my\_transaction);
-`uvm\_object\_utils(ooo\_sequence)
+```
+class ooo_sequence extends uvm_sequence #(my_transaction);
+`uvm_object_utils(ooo_sequence)
 
-int num\_txns = 20;
+int num_txns = 20;
 
-function new(string name = "ooo\_sequence");
-    super.new(name);
+function new(string name = "ooo_sequence");
+    super.new(name);
 endfunction
 
-task body();
-    my\_transaction req, rsp;
+task body();
+    my_transaction req, rsp;
 
-    // 并发发出所有请求
-    fork
-      repeat (num\_txns) begin
-        req = my\_transaction::type\_id::create("req");
-        start\_item(req);
-        if (!req.randomize() with {
-          id inside {[0:3]};
-        })
-          `uvm\_fatal("RAND", "Randomization failed")
-        finish\_item(req);
-      end
-    join\_none
+    // 并发发出所有请求
+    fork
+      repeat (num_txns) begin
+        req = my_transaction::type_id::create("req");
+        start_item(req);
+        if (!req.randomize() with {
+          id inside {[0:3]};
+        })
+          `uvm_fatal("RAND", "Randomization failed")
+        finish_item(req);
+      end
+    join_none
 
-    // 批量等待响应
-    repeat (num\_txns) begin
-      get\_response(rsp);
-      `uvm\_info("SEQ", $sformatf("Response: id=%0d, addr=0x%0h, rdata=0x%0h, bresp=%0d",
-                                  rsp.id, rsp.addr, rsp.rdata, rsp.bresp), UVM\_MEDIUM)
-    end
+    // 批量等待响应
+    repeat (num_txns) begin
+      get_response(rsp);
+      `uvm_info("SEQ", $sformatf("Response: id=%0d, addr=0x%0h, rdata=0x%0h, bresp=%0d",
+                                  rsp.id, rsp.addr, rsp.rdata, rsp.bresp), UVM_MEDIUM)
+    end
 endtask
 endclass
+```
 
 关键点：
 
@@ -5411,8 +3550,7 @@ AXI 读写通道的 ID 独立编号，同一 ID 可能同时出现在读和写�
 
 > 来源：https://mp.weixin.qq.com/s/_OI8vzlIC3KZypVQa_Bwxg
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 32
-> **已截图**
+> update 2026/08/22 21 : 06
 
 > 前五篇站在 bus master 视角。本篇换到另一边：Slave VIP 不主动发请求，它看见请求后按可配置策略给出响应。
 
@@ -5424,7 +3562,7 @@ AXI 读写通道的 ID 独立编号，同一 ID 可能同时出现在读和写�
 
 Slave VIP 刚好相反：**请求来自 DUT，VIP 的职责是在合适的时刻返回响应。** 这种由接口事件触发的 transactor，在 UVM Cookbook 中称为 **responder**。
 
-![](UVM_AI_assets/image-0081.png)
+![](UVM_AI_assets/image-0123.png)
 
 | 场景 | DUT 的角色 | Slave VIP 需要做什么 |
 | --- | --- | --- |
@@ -5466,53 +3604,57 @@ Cookbook 把 slave sequence 的完整循环描述为四步：
 
 同一种 item 描述请求和响应。请求侧字段不随机；响应侧字段可随机。
 
-class apb\_slave\_item extends uvm\_sequence\_item;
-  `uvm\_object\_utils(apb\_slave\_item)
+```
+class apb_slave_item extends uvm_sequence_item;
+  `uvm_object_utils(apb_slave_item)
 
-  // Master -> slave
-  logic [31:0] addr;
-  logic [31:0] wdata;
-  bit          write;
+  // Master -> slave
+  logic [31:0] addr;
+  logic [31:0] wdata;
+  bit          write;
 
-  // Slave -> master
-  rand logic [31:0] rdata;
-  rand bit          slverr;
-  rand int unsigned delay;
+  // Slave -> master
+  rand logic [31:0] rdata;
+  rand bit          slverr;
+  rand int unsigned delay;
 
-  constraint c\_delay { delay inside {[0:2]}; }
-  constraint c\_err   { slverr dist {0 := 95, 1 := 5}; }
+  constraint c_delay { delay inside {[0:2]}; }
+  constraint c_err   { slverr dist {0 := 95, 1 := 5}; }
 endclass
+```
 
 最小 memory responder：
 
-class apb\_mem\_responder\_seq extends uvm\_sequence #(apb\_slave\_item);
-  `uvm\_object\_utils(apb\_mem\_responder\_seq)
+```
+class apb_mem_responder_seq extends uvm_sequence #(apb_slave_item);
+  `uvm_object_utils(apb_mem_responder_seq)
 
-  logic [31:0] memory [logic [31:0]];
+  logic [31:0] memory [logic [31:0]];
 
-  task body();
-    apb\_slave\_item req;
-    apb\_slave\_item rsp;
+  task body();
+    apb_slave_item req;
+    apb_slave_item rsp;
 
-    forever begin
-      req = apb\_slave\_item::type\_id::create(\"req\");
-      start\_item(req);
-      finish\_item(req);
+    forever begin
+      req = apb_slave_item::type_id::create(\"req\");
+      start_item(req);
+      finish_item(req);
 
-      rsp = apb\_slave\_item::type\_id::create(\"rsp\");
-      rsp.copy(req);
-      if (req.write)
-        memory[req.addr] = req.wdata;
+      rsp = apb_slave_item::type_id::create(\"rsp\");
+      rsp.copy(req);
+      if (req.write)
+        memory[req.addr] = req.wdata;
 
-      assert (rsp.randomize() with {
-        if (!req.write) rdata == memory[req.addr];
-      });
+      assert (rsp.randomize() with {
+        if (!req.write) rdata == memory[req.addr];
+      });
 
-      start\_item(rsp);
-      finish\_item(rsp);
-    end
-  endtask
+      start_item(rsp);
+      finish_item(rsp);
+    end
+  endtask
 endclass
+```
 
 driver 节奏：
 
@@ -5520,21 +3662,23 @@ driver 节奏：
 
 再取 `rsp` 完成 access phase，第二次 `item_done()`。
 
-task apb\_slave\_driver::run\_phase(uvm\_phase phase);
-  apb\_slave\_item req;
-  apb\_slave\_item rsp;
+```
+task apb_slave_driver::run_phase(uvm_phase phase);
+  apb_slave_item req;
+  apb_slave_item rsp;
 
-  vif.drive\_idle();
-  forever begin
-    seq\_item\_port.get\_next\_item(req);
-    wait\_for\_and\_sample\_setup(req);
-    seq\_item\_port.item\_done();
+  vif.drive_idle();
+  forever begin
+    seq_item_port.get_next_item(req);
+    wait_for_and_sample_setup(req);
+    seq_item_port.item_done();
 
-    seq\_item\_port.get\_next\_item(rsp);
-    drive\_access\_response(rsp);
-    seq\_item\_port.item\_done();
-  end
+    seq_item_port.get_next_item(rsp);
+    drive_access_response(rsp);
+    seq_item_port.item_done();
+  end
 endtask
+```
 
 ### 11.2.2 多 item 模式
 
@@ -5593,8 +3737,10 @@ sequence 在 `finish_item(req)` 等 driver 采样完；driver 在 `get_next_i
 
 因此必须遵循固定的握手顺序：
 
-sequence 交 req → driver 采样 req → item\_done(req)
-sequence 生成 rsp → driver 取得 rsp → 完成 access → item\_done(rsp)
+```
+sequence 交 req → driver 采样 req → item_done(req)
+sequence 生成 rsp → driver 取得 rsp → 完成 access → item_done(rsp)
+```
 
 **问题三：不要用 busy wait 阻塞仿真推进。**
 
@@ -5634,8 +3780,7 @@ sequence 生成 rsp → driver 取得 rsp → 完成 access → item\_done(rsp)
 
 > 来源：https://mp.weixin.qq.com/s/U8KO3_mhdF21yPKz3fbUVQ
 > 作者：福尔摩芯
-> update 2026/08/22 11 : 32
-> **已截图**
+> update 2026/08/22 21 : 07
 
 > 前六篇完成了 Agent介绍：transaction 经 sequencer 交给 driver，最终变成总线行为。本篇转向 transaction 的组织方式——如何用 Sequence 表达可复用的测试场景。
 
@@ -5669,7 +3814,7 @@ Hierarchical Sequences 分为三层：
 | Worker Sequence | 组合成完整任务 | 地址遍历、数据搬运、压力流量 |
 | Virtual Sequence | 协调多个 Agent | Master 发请求，Slave 注入延迟 |
 
-![](UVM_AI_assets/image-0082.png)
+![](UVM_AI_assets/image-0124.png)
 
 这里的“Sequence 体系”是普通 sequence 的分层组织，不是 `uvm_sequence_library` 类。
 
@@ -5683,47 +3828,51 @@ API Sequence 是 Agent 对外提供的事务级接口。上层设置地址、数
 
 下面是 AHB 单笔写：
 
-class ahb\_single\_write\_seq extends uvm\_sequence #(ahb\_transaction);
-  `uvm\_object\_utils(ahb\_single\_write\_seq)
+```
+class ahb_single_write_seq extends uvm_sequence #(ahb_transaction);
+  `uvm_object_utils(ahb_single_write_seq)
 
-  rand bit [31:0] addr;
-  rand bit [31:0] data;
+  rand bit [31:0] addr;
+  rand bit [31:0] data;
 
-  task body();
-    req = ahb\_transaction::type\_id::create("req");
+  task body();
+    req = ahb_transaction::type_id::create("req");
 
-    start\_item(req);
-    assert(req.randomize() with {
-      req.write == 1;
-      req.addr  == local::addr;
-      req.data  == local::data;
-    });
-    finish\_item(req);
-  endtask
+    start_item(req);
+    assert(req.randomize() with {
+      req.write == 1;
+      req.addr  == local::addr;
+      req.data  == local::data;
+    });
+    finish_item(req);
+  endtask
 endclass
+```
 
 单笔读的结构相同，区别是把读数据作为输出：
 
-class ahb\_single\_read\_seq extends uvm\_sequence #(ahb\_transaction);
-  `uvm\_object\_utils(ahb\_single\_read\_seq)
+```
+class ahb_single_read_seq extends uvm_sequence #(ahb_transaction);
+  `uvm_object_utils(ahb_single_read_seq)
 
-  rand bit [31:0] addr;   // 输入
-       bit [31:0] rdata;  // 输出
+  rand bit [31:0] addr;   // 输入
+       bit [31:0] rdata;  // 输出
 
-  task body();
-    req = ahb\_transaction::type\_id::create("req");
+  task body();
+    req = ahb_transaction::type_id::create("req");
 
-    start\_item(req);
-    assert(req.randomize() with {
-      req.write == 0;
-      req.addr  == local::addr;
-    });
-    finish\_item(req);
+    start_item(req);
+    assert(req.randomize() with {
+      req.write == 0;
+      req.addr  == local::addr;
+    });
+    finish_item(req);
 
-    get\_response(req);
-    rdata = req.data;
-  endtask
+    get_response(req);
+    rdata = req.data;
+  endtask
 endclass
+```
 
 地址、写数据等输入声明为 `rand`，既能定向赋值，也能约束随机；读数据、响应状态等输出保持 non-rand。
 
@@ -5737,36 +3886,38 @@ API Sequence 的接口应保持小而完整。调用者只传完成操作所需�
 
 Worker Sequence 调用 API Sequence，表达“先做什么、后做什么、重复多少次”。例如，对一段地址先写后读：
 
-class ahb\_range\_rw\_seq extends uvm\_sequence #(ahb\_transaction);
-  `uvm\_object\_utils(ahb\_range\_rw\_seq)
+```
+class ahb_range_rw_seq extends uvm_sequence #(ahb_transaction);
+  `uvm_object_utils(ahb_range_rw_seq)
 
-  rand bit [31:0] base\_addr;
-  rand int unsigned count;
+  rand bit [31:0] base_addr;
+  rand int unsigned count;
 
-  constraint c\_count { count inside {[1:64]}; }
+  constraint c_count { count inside {[1:64]}; }
 
-  task body();
-    for (int i = 0; i < count; i++) begin
-      ahb\_single\_write\_seq wr;
-      ahb\_single\_read\_seq  rd;
-      bit [31:0] expected = 32'h1000 + i;
+  task body();
+    for (int i = 0; i < count; i++) begin
+      ahb_single_write_seq wr;
+      ahb_single_read_seq  rd;
+      bit [31:0] expected = 32'h1000 + i;
 
-      wr = ahb\_single\_write\_seq::type\_id::create($sformatf("wr\_%0d", i));
-      wr.addr  = base\_addr + i \* 4;
-      wr.data  = expected;
-      wr.start(m\_sequencer, this);
+      wr = ahb_single_write_seq::type_id::create($sformatf("wr_%0d", i));
+      wr.addr  = base_addr + i * 4;
+      wr.data  = expected;
+      wr.start(m_sequencer, this);
 
-      rd = ahb\_single\_read\_seq::type\_id::create($sformatf("rd\_%0d", i));
-      rd.addr = base\_addr + i \* 4;
-      rd.start(m\_sequencer, this);
+      rd = ahb_single_read_seq::type_id::create($sformatf("rd_%0d", i));
+      rd.addr = base_addr + i * 4;
+      rd.start(m_sequencer, this);
 
-      if (rd.rdata != expected)
-        `uvm\_error("RANGE\_RW", $sformatf(
-          "addr=%08h expected=%08h actual=%08h",
-          rd.addr, expected, rd.rdata))
-    end
-  endtask
+      if (rd.rdata != expected)
+        `uvm_error("RANGE_RW", $sformatf(
+          "addr=%08h expected=%08h actual=%08h",
+          rd.addr, expected, rd.rdata))
+    end
+  endtask
 endclass
+```
 
 该 Worker Sequence 只描述地址递增、数据生成和读写顺序，不重复实现 item 握手。类似方式还可以构建：
 
