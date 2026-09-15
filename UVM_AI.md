@@ -243,6 +243,60 @@
 　　[16.7 小结](#167-小结)  
 　　[16.8 面试问答](#168-面试问答)  
 　　[16.9 问题 1：什么是被动 UVM 环境，它适合什么场景？](#169-问题-1什么是被动-uvm-环境它适合什么场景)  
+[17. UVM 基础第七天：结果乱序回来，记分板怎么不乱](#17-uvm-基础第七天结果乱序回来记分板怎么不乱)  
+　　[17.1 三种配对问题](#171-三种配对问题)  
+　　[17.2 ID 与唯一性的边界](#172-id-与唯一性的边界)  
+　　[17.3 顺序协议：队列先入先出](#173-顺序协议队列先入先出)  
+　　[17.4 顺序协议：队列先入先出](#174-顺序协议队列先入先出)  
+　　[17.5 同 ID 多笔在飞：每个 ID 一条队列](#175-同-id-多笔在飞每个-id-一条队列)  
+　　[17.6 完全乱序协议：关联数组按唯一 tag 配对](#176-完全乱序协议关联数组按唯一-tag-配对)  
+　　[17.7 处理唯一 tag 复用与超时](#177-处理唯一-tag-复用与超时)  
+　　[17.8 读懂输出](#178-读懂输出)  
+　　[17.9 真实调试：错误是数据错，还是配对错](#179-真实调试错误是数据错还是配对错)  
+　　[17.10 联合键与多流场景](#1710-联合键与多流场景)  
+　　[17.11 小结](#1711-小结)  
+　　[17.12 面试问答](#1712-面试问答)  
+　　[17.13 问题 1：什么时候应该用队列做 scoreboard，什么时候应该用关联数组？](#1713-问题-1什么时候应该用队列做-scoreboard什么时候应该用关联数组)  
+　　[17.14 问题 2：为什么唯一 tag 重用要在请求发出时就报错，而不是等完成回来再处理？](#1714-问题-2为什么唯一-tag-重用要在请求发出时就报错而不是等完成回来再处理)  
+[18. UVM 源码精读 Day5：工厂机制：uvm_factory](#18-uvm-源码精读-day5工厂机制uvm_factory)  
+　　[18.1 关键特性](#181-关键特性)  
+　　[18.2 源码分析](#182-源码分析)  
+　　　　[18.2.1 工厂类抽象定义：uvm\_factory extends uvm\_void](#1821-工厂类抽象定义uvm_factory-extends-uvm_void)  
+　　　　[18.2.2 类型代理：uvm\_component\_registry 模板类](#1822-类型代理uvm_component_registry-模板类)  
+　　　　[18.2.3 覆盖机制的四种粒度](#1823-覆盖机制的四种粒度)  
+　　　　[18.2.4 实例路径通配符与覆盖查找](#1824-实例路径通配符与覆盖查找)  
+　　　　[18.2.5 创建流程的调试：debug\_create 系列](#1825-创建流程的调试debug_create-系列)  
+　　[18.3 小结](#183-小结)  
+[19. UVM 基础第六天：广播之后，事务怎么按自己的节奏被取走](#19-uvm-基础第六天广播之后事务怎么按自己的节奏被取走)  
+　　[19.1 为什么不能在 write 里做所有事](#191-为什么不能在-write-里做所有事)  
+　　[19.2 分析端口、export 与 FIFO 各在什么位置](#192-分析端口export-与-fifo-各在什么位置)  
+　　[19.3 对象句柄不会自动变成快照](#193-对象句柄不会自动变成快照)  
+　　[19.4 声明 FIFO](#194-声明-fifo)  
+　　[19.5 阻塞 get 与非阻塞 try\_get](#195-阻塞-get-与非阻塞-try_get)  
+　　[19.6 两路 FIFO 配对](#196-两路-fifo-配对)  
+　　[19.7 读懂输出](#197-读懂输出)  
+　　[19.8 真实调试：卡住、忙转、还是积压](#198-真实调试卡住忙转还是积压)  
+　　[19.9 小结](#199-小结)  
+　　[19.10 面试问答](#1910-面试问答)  
+　　[19.11 问题 1：analysis port 与 analysis FIFO 的主要区别是什么？](#1911-问题-1analysis-port-与-analysis-fifo-的主要区别是什么)  
+[20. UVM sequencer 仲裁：多个 sequence 为什么会卡在 start_item](#20-uvm-sequencer-仲裁多个-sequence-为什么会卡在-start_item)  
+　　[20.1 先定义仲裁相关术语](#201-先定义仲裁相关术语)  
+　　[20.2 一条 item 从排队到 driver 的路径](#202-一条-item-从排队到-driver-的路径)  
+　　[20.3 两个 sequence 竞争同一 driver](#203-两个-sequence-竞争同一-driver)  
+　　[20.4 flow-control relevance：允许发与轮到发不同](#204-flow-control-relevance允许发与轮到发不同)  
+　　[20.5 lock 与 grab：为什么会放大卡死](#205-lock-与-grab为什么会放大卡死)  
+　　[20.6 pre\_do、mid\_do 与 post\_do：grant 前后还能做什么](#206-pre_domid_do-与-post_dogrant-前后还能做什么)  
+　　[20.7 某一实际 UVC 的 driver 模式](#207-某一实际-uvc-的-driver-模式)  
+　　[20.8 virtual sequencer：多个 agent 时仲裁在哪一层](#208-virtual-sequencer多个-agent-时仲裁在哪一层)  
+　　[20.9 仲裁策略与 starvation](#209-仲裁策略与-starvation)  
+　　[20.10 读懂输出](#2010-读懂输出)  
+　　[20.11 DV 检查点](#2011-dv-检查点)  
+　　[20.12 真实调试流程](#2012-真实调试流程)  
+　　[20.13 面试问答](#2013-面试问答)  
+　　[20.14 问题 1：`start_item` 卡住是否一定代表 driver 卡住？](#2014-问题-1start_item-卡住是否一定代表-driver-卡住)  
+　　[20.15 问题 2：`lock` 与 `grab` 的区别是什么？](#2015-问题-2lock-与-grab-的区别是什么)  
+　　[20.16 问题 3：`is_relevant` 与 priority 如何配合？](#2016-问题-3is_relevant-与-priority-如何配合)  
+　　[20.17 小结](#2017-小结)  
 
 <!-- toc-end -->
 
@@ -4610,3 +4664,505 @@ endfunction
 问题 2：为什么同一笔 monitor 事务要同时送给 predictor 和 scoreboard？
 
 回答：送给 predictor 的那一路用于生成“应该发生什么”，送给 scoreboard 的那一路代表“实际发生了什么”。两者从同一个观察事实出发、在 scoreboard 汇合比较，才能保证期望和实际都有可追溯来源。
+
+---
+
+# 17. UVM 基础第七天：结果乱序回来，记分板怎么不乱
+
+> 来源：https://mp.weixin.qq.com/s/bij3r_kL9UFenxm9rCuL_A
+> 作者：周漾
+> update 2026/08/29 13 : 33
+
+第四天的最小记分板按地址配对，足够说明期望和实际怎样汇合。但真实协议很少这么理想：同一个地址会被反复访问，多笔读可以同时在飞，返回结果还可能乱序。此时“按地址查一笔期望”会把正确数据配给错误请求，产生最难解释的一类误报。
+
+[UVM 基础第四天：怎样判断结果对不对](https://mp.weixin.qq.com/s?__biz=MzcwOTM2NDg5NA==&mid=2247484896&idx=1&sn=7e97233bcb5b2224b08b084066605417&scene=21#wechat_redirect)
+
+进阶 scoreboard 的关键不是更复杂的 compare，而是先把配对关系建对。顺序协议、乱序协议和多流协议，应该使用不同的数据结构。
+
+## 17.1 三种配对问题
+
+![顺序与乱序的配对模型](UVM_AI_assets/image-0125.png)
+
+图 1：严格保序可用队列；乱序返回必须按 ID 查表；多流还要把流身份加入键。
+
+严格保序时，最简单的队列就是正确答案：第一个期望对应第一个实际。乱序返回时，先到的实际未必对应最早发出的请求，队列会立刻错位；这时必须使用事务 ID 或标签作为键。若不同流可复用相同 ID，键还要再加上流身份。
+
+选择键时不要从“字段哪个方便拿”出发，而要从协议保证出发：什么字段能唯一标识一笔在飞请求，什么字段在完成回来时还能原样看到。答案不同，记分板结构也不同。
+
+## 17.2 ID 与唯一性的边界
+
+这里需要特别澄清：ID 并不总是“同一时刻只能用一次”的唯一事务编号。不同协议和不同通道对它的承诺不同。有些接口把 ID 当作必须独占到完成回来的 tag，此时一条 `pending[id]` 就足够；有些接口允许同一个 ID 同时有多笔请求在飞，但保证同 ID 内的响应按发送顺序回来，此时不能用一个表项覆盖另一笔，而要把 `pending[id]` 设计成一个队列。
+
+![](UVM_AI_assets/image-0126.png)
+
+图 2：先确认协议对 ID 的保证，再决定一个 ID 对应一个 expected、一个队列，还是联合键。
+
+“ID 重用一定错误”只适用于第一种模型。若协议允许同 ID 多笔在飞，发起第二笔本身完全合法；错误发生在 scoreboard 仍然只用 `pending[id] = exp` 这一个槽位，后来的 expected 覆盖了前面的 expected。此时完成即使严格保序回来，记分板也会把第一笔实际拿去比较第二笔期望，制造假 mismatch。
+
+## 17.3 顺序协议：队列先入先出
+
+## 17.4 顺序协议：队列先入先出
+
+![顺序配对的数据流](UVM_AI_assets/image-0127.png)
+
+图 3：期望和实际都按顺序进入，队首互相比较。
+
+![](UVM_AI_assets/image-0128.png)
+
+代码图 1：期望入队，实际到来时取队首比较。
+
+队列的优势是自然地保留顺序，调试时也容易看：队首永远是下一笔应出现的结果。它的前提同样严格：协议必须保证实际不会超越期望。一旦协议允许乱序，这段代码仍会运行，却会把每一笔都配错一位，错误日志看起来像大规模数据损坏。
+
+## 17.5 同 ID 多笔在飞：每个 ID 一条队列
+
+![同 ID 的 expected 队列](UVM_AI_assets/image-0129.png)
+
+图 4：协议保证同 ID 内保序时，ID 是队列索引，不是唯一表项索引。
+
+这个模型介于全局 FIFO 和完全乱序之间。不同 ID 的响应可以交错，因此不能只维护一条总队列；同一个 ID 内又有顺序保证，因此也不需要给每笔再分配唯一 tag。实现上使用“ID 到 expected 队列”的关联数组：请求到来时压入该 ID 的队尾，响应到来时取该 ID 的队首比较。这样既利用了协议的保序保证，也不人为限制同 ID 的并发度。
+
+![](UVM_AI_assets/image-0130.png)
+
+代码图 2：同一个 ID 的多个 expected 排成队列，实际响应只与该 ID 的队首比较。
+
+## 17.6 完全乱序协议：关联数组按唯一 tag 配对
+
+![乱序配对的数据流](UVM_AI_assets/image-0131.png)
+
+代码图 3：以请求 ID 为键保存期望，实际带同一个 ID 回来时再取出比较。
+
+这里最重要的检查是 `exists()`。实际回来了却找不到期望，不应直接当成“数据错了”：它可能是 monitor 漏了请求、唯一 tag 被过早复用、或者完成本身来自未预期的来源。比较成功之后必须删除表项并释放 tag；忘了删除会让同一个 tag 后续被错误地复用。
+
+## 17.7 处理唯一 tag 复用与超时
+
+![](UVM_AI_assets/image-0132.png)
+
+代码图 4：唯一 tag 在飞期间不能复用；长期遗留项按超时单独报告。
+
+唯一 tag 复用是乱序记分板里最危险的错误。若请求 A 还没完成就把同一个 tag 给请求 B，完成回来时它只能匹配到表中最新的一笔，A 或 B 必有一个错配。正确行为不是“尽量比较”，而是在发出 B 的那一刻就报错，阻止状态继续污染。若协议允许同 ID 多笔在飞，则不应套用这条规则，而应采用上节的每 ID 队列。
+
+超时也需要独立处理。遗留期望不一定代表设计错，可能只是仿真结束得太早；但一条期望存活远超过协议允许的延迟，就应当报告为超时，并给出 ID、地址和发出时刻。
+
+复位与取消也要定义清楚。复位到来时，复位前已经发出但尚未返回的事务通常不应继续等待到新一轮业务中；scoreboard 应把它们标记为取消、清理对应队列或表项，并在日志中区分“被复位取消”与“真正超时”。不做这一步，复位后的第一个响应可能与复位前残留 expected 错配，错误看起来像随机数据问题。
+
+![复位时清理 pending 状态](UVM_AI_assets/image-0133.png)
+
+图 5：复位清理的是未完成配对状态；取消与超时应当分别统计和报告。
+
+## 17.8 读懂输出
+
+![](UVM_AI_assets/image-0134.png)
+
+输出图 1：不同 ID 的完成乱序回来仍然正确；唯一 tag 重用在发出时就被拒绝。
+
+日志中的“乱序”不等于错误。若 ID `0x07` 的完成先于 ID `0x05` 回来，但两者各自匹配到正确期望，这是正常吞吐行为。真正的红线取决于协议：唯一 tag 模型中，同一个 tag 的未完成请求重叠是错误；同 ID 保序模型中，同一个 ID 的多笔请求可以存在，但响应必须按该 ID 的队首顺序回来；无论哪种模型，实际键在期望表或队列中找不到都应报告。
+
+## 17.9 真实调试：错误是数据错，还是配对错
+
+![乱序记分板调试顺序](UVM_AI_assets/image-0135.png)
+
+图 6：先确认 ID 是否唯一，再确认期望和实际是否带同一完整键，最后才看数据字段。
+
+大量 compare fail 同时出现时，不要立刻怀疑设计整体坏了。先选一笔失败事务，确认它的 ID、流身份和地址是不是对应同一笔请求；再确认该协议模型中 ID 是唯一 tag 还是队列索引。配对键错一位，或把队列模型错误实现成单表项，会制造大量“数据不一致”的假象。只有键和生命周期确认正确之后，字段差异才有资格被当成设计行为错误。
+
+## 17.10 联合键与多流场景
+
+当一个 ID 只在某条逻辑流内唯一时，ID 本身仍然不够。常见的联合键形式是 `{source_id, transaction_id}`、`{channel, id}` 或 `{interface_index, id}`。联合键的选择原则依旧不变：所有组成字段都必须同时出现在请求侧和完成侧，并且协议保证这组字段在未完成窗口内唯一。
+
+![](UVM_AI_assets/image-0136.png)
+
+图 7：相同 ID 出现在不同流时，用流身份加 ID 才能唯一配对。
+
+错误日志中应把完整联合键作为一个整体打印，而不是只打印 ID。只打印 `id=0x05` 时，两条流的失败会看起来像同一问题；打印 `stream=0x01 id=0x05` 后，配对关系才可重建。
+
+## 17.11 小结
+
+顺序协议用队列，完全乱序的唯一 tag 协议用关联数组，同 ID 保序的并发协议用“每 ID 一条队列”，键由协议保证决定。比较逻辑可以很简单，配对关系和 pending 生命周期必须严格。唯一 tag 重用要在请求发出时阻止，复位取消和真正超时要分开报告。乱序返回本身是正常性能行为，错配才是错误。
+
+## 17.12 面试问答
+
+## 17.13 问题 1：什么时候应该用队列做 scoreboard，什么时候应该用关联数组？
+
+回答：协议保证全局严格保序时，队列的先入先出关系就是正确配对关系。完成可完全乱序且 tag 唯一时，用 tag 或联合键建立关联数组；若协议允许同 ID 多笔在飞但保证同 ID 内保序，则应使用“ID 到 expected 队列”的结构。数据结构必须来自协议保证，不能只按字段方便程度选择。
+
+## 17.14 问题 2：为什么唯一 tag 重用要在请求发出时就报错，而不是等完成回来再处理？
+
+回答：同一个唯一 tag 的两笔未完成请求重叠后，完成回来时已经无法唯一判断属于哪一笔，状态表从根上被污染。等完成回来再猜会制造错配和误报；发出第二笔时立即拒绝，才能保持配对关系可证明。若协议允许同 ID 并发，则不应报错，应改用每 ID 队列管理。
+
+---
+
+# 18. UVM 源码精读 Day5：工厂机制：uvm_factory
+
+> 来源：https://mp.weixin.qq.com/s/U5Z2kXc-jGCwKIbLkFkx4Q
+> 作者：study buddy
+> update 2026/08/29 13 : 36
+
+— UVM 源码精读系列 - Day 5 —
+
+代理 + 注册表 + 覆盖链 — 实现运行时多态的 UVM 核心
+
+![uvm_factory 核心架构](UVM_AI_assets/image-0137.png)
+
+---
+
+## 18.1 关键特性
+
+- **核心抽象类**
+
+  ：`uvm_factory extends uvm_void`、`uvm_object_wrapper extends uvm_void` 均为 `virtual class`，定义接口而不实现具体创建逻辑
+- **代理注册模式**
+
+  ：通过泛型参数化类 `uvm_component_registry#(T, Tname)` 和 `uvm_object_registry#(T, Tname)` 作为“类型代理”，将 SystemVerilog 静态类型与工厂动态调用解耦
+- **四级覆盖机制**
+
+  ：覆盖可分为 `set_inst_override`（实例级）/ `set_type_override`（类型级）× `by_type`/ `by_name`，共四种粒度的覆盖 API
+- **路径通配匹配**
+
+  ：实例覆盖支持 `*` 和 `?` 通配符匹配 `full_inst_path`，单条规则可作用于多个实例
+- **调试可视化**
+
+  ：`debug_create_by_type` / `debug_create_by_name` 复刻实际创建流程，但不真正实例化，仅打印覆盖命中信息
+
+## 18.2 源码分析
+
+### 18.2.1 工厂类抽象定义：uvm\_factory extends uvm\_void
+
+```
+// @uvm-ieee 1800.2-2020 auto 8.3.1.1
+virtual class uvm_factory extends uvm_void;  // Group -- Retrieving the factory  static function uvm_factory get();    uvm_coreservice_t s;    s = uvm_coreservice_t::get();    return s.get_factory();  endfunction  static function void set(uvm_factory f);    uvm_coreservice_t s;    s = uvm_coreservice_t::get();    s.set_factory(f);  endfunction  // Group -- Registering Types  pure virtual function bit register(uvm_object_wrapper obj);  pure virtual function uvm_object_wrapper get_registered_type(string type_name);  ...endclass
+```
+
+`uvm_factory` 是所有工厂实现的父类，本身不提供任何实现。`get()` / `set()` 通过 `uvm_coreservice_t` 单例服务访问 —— 这意味着 UVM 永远只有**一个工厂实例**，但允许测试用例替换工厂实现。所有注册、覆盖、创建相关的纯虚方法（如 `pure virtual function bit register`）均在 `uvm_default_factory` 中实现。
+
+### 18.2.2 类型代理：uvm\_component\_registry 模板类
+
+```
+// @uvm-ieee 1800.2-2020 auto 8.2.3.1
+class uvm_component_registry #(type T=uvm_component, string Tname="<unknown>")    extends uvm_object_wrapper;  virtual function uvm_component create_component(string name, uvm_component parent);    T obj;    obj = new(name, parent);    return obj;  endfunction  static function this_type get();    static this_type m_inst;    if (m_inst == null) m_inst = new();    return m_inst;  endfunction  ...endclass
+```
+
+`uvm_component_registry` 是泛型类，`uvm_component_utils` 宏展开后产生的就是该类型的一个特化（如 `uvm_component_registry#(my_driver, "my_driver")`）。`create_component` 是关键实现 —— 工厂调用 `create_component_by_type(...)` 时会间接调到此处，最终通过**存储在参数 `T` 中的真实类型 `new(name, parent)`**完成实例化。这种“宏 → 模板特化 → 存储目标类型”的链式设计，让泛型 SystemVerilog 在不引入 RTTI 的前提下实现了运行时多态。
+
+### 18.2.3 覆盖机制的四种粒度
+
+```
+// Instance overrides
+pure virtual function  void set_inst_override_by_type(uvm_object_wrapper original_type,                                 uvm_object_wrapper override_type,                                 string full_inst_path);pure virtual function  void set_inst_override_by_name(string original_type_name,                                 string override_type_name,                                 string full_inst_path);// Type overridespure virtual function  void set_type_override_by_type(uvm_object_wrapper original_type,                                 uvm_object_wrapper override_type,                                 bit replace=1);pure virtual function  void set_type_override_by_name(string original_type_name,                                 string override_type_name,                                 bit replace=1);
+```
+
+覆盖操作按**作用域**（type / inst）与**指定方式**（type / name）划分四个 API：
+
+- `set_type_override_*`
+
+  ：作用域为**所有该类型**的 `create()` 调用；与实例路径无关
+- `set_inst_override_*`
+
+  ：作用域为**匹配 `full_inst_path`** 的实例集合；支持通配符
+- `_by_type`
+
+  ：以 `uvm_object_wrapper` 句柄为参数，类型精确，无须预注册
+- `_by_name`
+
+  ：以字符串类名为参数，需要预先注册到工厂
+
+优先级规则：当多种覆盖同时匹配时，**实例覆盖优先于类型覆盖**，且覆盖按 FIFO 顺序处理 —— **应先注册更具体的，后注册更通用的**。
+
+### 18.2.4 实例路径通配符与覆盖查找
+
+```
+// @uvm-ieee 1800.2-2020 auto 8.3.1.4.1
+extern virtual function  void set_inst_override_by_name(string original_type_name,                                 string override_type_name,                                 string full_inst_path);
+```
+
+源码注释明确说明通配符语义：
+
+> The ~full\_inst\_path~ may include wildcards (\* and ?) such that a single instance override can be applied in multiple contexts. A ~full\_inst\_path~ of "\*" is effectively a type override, as it will match all contexts.
+
+即 `full_inst_path = "*"` 相当于类型级覆盖；通配符匹配由 `m_matches_inst_override` / `m_matches_type_override` 内部实现。这种设计允许用户用一行代码覆盖一类实例（例如所有 `env.*.driver` 路径下的 driver），相比在每个 `build_phase` 中显式覆盖更灵活。
+
+### 18.2.5 创建流程的调试：debug\_create 系列
+
+```
+function void uvm_default_factory::m_debug_create(
+    string requested_type_name,    uvm_object_wrapper requested_type,    string parent_inst_path,    string name);  string full_inst_path;  uvm_object_wrapper result;  if (parent_inst_path == "") full_inst_path = name;  else if (name != "") full_inst_path = {parent_inst_path,".",name};  else full_inst_path = parent_inst_path;  m_override_info.delete();  ...  // 复刻 create_*_by_type 的搜索算法但不真正创建  m_debug_display(requested_type_name, result, full_inst_path);endfunction
+```
+
+`debug_create_by_*` 沿用了完整的覆盖查找流程（`m_override_info` 收集每次候选命中），但**最终不调用 `create_component`**。这避免了误触发 `build_phase` 副作用（创建子组件、读取 config\_db 等），同时能精确展示“实际 create 会返回什么”。对调试验证平台的覆盖行为特别有用——是验证覆盖规则正确性的关键调试手段。
+
+## 18.3 小结
+
+`uvm_factory` 的设计精髓在于 **代理 + 注册表 + 覆盖链** 三层抽象：
+
+- **代理**
+
+  ：`uvm_object_wrapper` 屏蔽真实类型
+- **注册表**
+
+  ：注册每个可用类型的工厂可访问句柄
+- **覆盖链**
+
+  ：通过 `uvm_factory_override` 队列维护覆盖规则，按 FIFO 顺序匹配
+
+理解 `uvm_factory` 的设计，是理解 UVM “不修改代码即可改变行为”能力的关键 —— 这也是 UVM 优于直接 `new()` 的核心价值。
+
+---
+
+# 19. UVM 基础第六天：广播之后，事务怎么按自己的节奏被取走
+
+> 来源：https://mp.weixin.qq.com/s/NOm8srYVa__RIN0kfgF-_g
+> 作者：周漾
+> update 2026/08/29 13 : 38
+
+分析端口解决了“一笔事务同时通知多个消费者”的问题，但它本身并不保存数据。发布端调用 `write()` 时，订阅者要立刻处理；如果某个消费者需要等待另一笔事务、或者要把数据和别的流配对，直接在 `write()` 里做全部工作会让代码越来越复杂。
+
+TLM analysis FIFO 把“通知到达”和“真正处理”拆开。监视器仍然只负责广播，FIFO 替消费者把事务暂存下来；消费者在自己的长期循环里按需要 `get()`。这是一种很常见的节奏解耦方式。
+
+## 19.1 为什么不能在 write 里做所有事
+
+![从 monitor 到 scoreboard 的 FIFO 数据路径](UVM_AI_assets/image-0138.png)
+
+图 1：monitor 只发布事实；FIFO 缓冲事务；scoreboard 按自己的节奏消费。
+
+`write()` 适合非常短的动作，例如记录一行日志、累加一个计数、采样一次覆盖率。它不适合等待：一旦在 `write()` 里等待另一条数据、等待时间或做昂贵计算，发布链条的行为就变得难以推断。
+
+FIFO 的好处不是让数据无限堆积，而是给消费者一个明确的缓冲边界。monitor 继续观察，scoreboard 可以等到两边都有数据再比较，数据流的责任更清楚。
+
+还要看清 analysis 通道的一个关键约束：发布端的 `write()` 不应该被消费者阻塞。monitor 观察的是正在发生的接口行为，若下游比较器因为等待另一条流而把 monitor 卡住，monitor 就可能错过之后的真实握手。analysis FIFO 正是把这层“即时通知”转成“可延后消费”的桥梁：它快速接住事务，真正耗时的配对和计算留给消费者自己的循环。
+
+## 19.2 分析端口、export 与 FIFO 各在什么位置
+
+![](UVM_AI_assets/image-0139.png)
+
+![](UVM_AI_assets/image-0140.png)
+
+图 2：port 负责发布，export 暴露接收能力，imp 真正接住事务，get 端口交给消费者。
+
+这里不需要把 port、export、imp 当成三个独立 API 背诵。把它们理解成接口方向更直接：port 用来向外发送；export 用来把一个实现向外暴露；imp 是真正接收并实现 `write()` 的一端。analysis FIFO 已经替使用者实现了接收端，所以大多数环境只要把 monitor 的 analysis port 连到 FIFO 的 analysis export 即可。
+
+连接方向反过来理解会更清楚：monitor 的 port 说“有一笔事务可以交出去”；FIFO 的 export 说“这里有一个能接收事务的实现”；FIFO 内部的 imp 负责真正把句柄放进存储。消费者不直接订阅 monitor，而是从 FIFO 的 get 端口取对象。把这四个角色分开，面对复杂环境里的层层转发时就不会把“谁发布”“谁接收”“谁消费”混成一个概念。
+
+![analysis write 的非阻塞边界](UVM_AI_assets/image-0141.png)
+
+图 3：monitor 发布事实应当快速返回；FIFO 把等待和耗时处理隔在下游。
+
+这也解释了为什么不应在 subscriber 的 `write()` 中等待另一条数据。短小的统计、日志和覆盖采样可以放在 `write()`；任何可能等时间、等另一笔事务或做复杂计算的逻辑，应先把数据保存下来，再由独立处理循环完成。
+
+## 19.3 对象句柄不会自动变成快照
+
+![](UVM_AI_assets/image-0142.png)
+
+![](UVM_AI_assets/image-0143.png)
+
+图 4：FIFO 暂存的是发布进来的对象句柄；发布前 clone 才能把快照与 monitor 的工作对象隔开。
+
+FIFO 负责缓冲，不负责替发布者深拷贝 transaction。monitor 若把以后还会改写的临时对象直接写进 analysis port，FIFO 中保存的仍是同一个句柄；消费者稍后 `get()` 时，看到的可能已经是下一拍的数据。这和第二天分析端口的复制问题完全相同，只是 FIFO 延迟了症状出现的时刻，因此更难定位。
+
+安全的责任边界是：发布者在进入 analysis 网络之前创建独立快照；FIFO 和消费者只假设收到的对象在它们持有期间不会被外部改写。若消费者自己还要长期保存并继续修改对象，也应再复制一份，不要把“谁拥有这个句柄”的约定留给猜测。
+
+## 19.4 声明 FIFO
+
+![声明并连接 analysis FIFO](UVM_AI_assets/image-0144.png)
+
+代码图 1：每一路观察数据各有一个 FIFO，连接完成后 monitor 发布的事务会被暂存。
+
+FIFO 是组件，因此它也有层级和父组件。把它放在 scoreboard 内部很自然：谁负责消费，谁就拥有对应的缓冲。若一条输入流和一条输出流都要比较，应分别使用两个 FIFO；把两路数据混进同一个 FIFO，后续就不得不靠额外字段重新区分来源，反而增加配对复杂度。
+
+analysis FIFO 通常被当作无界缓冲使用，这意味着它不会因为满了而向 monitor 施加背压。这个行为保护了接口观察，但并不意味着可以无限积压：若消费者永久停住，队列会持续占用内存，最终把一个“数据流断开”的错误变成内存问题。因此应当把 `used()` 深度纳入健康监控，而不是只在 scoreboard 出错后才看它。
+
+![](UVM_AI_assets/image-0145.png)
+
+![](UVM_AI_assets/image-0146.png)
+
+图 5：无界缓冲避免阻塞 monitor，但生产速率长期高于消费速率时，深度会持续增长。
+
+多写入方也要谨慎。一个 FIFO 可以接住多个 publisher，但 transaction 本身若没有来源字段，消费者无法仅靠 FIFO 顺序分辨它来自哪一路接口。简单环境里“一个来源对应一个 FIFO”最清楚；确实需要合流时，应在 transaction 上明确标注来源，或在进入 FIFO 前建立统一的可配对键。
+
+## 19.5 阻塞 get 与非阻塞 try\_get
+
+![阻塞与非阻塞取数](UVM_AI_assets/image-0147.png)
+
+代码图 2：`get()` 没数据时等待；`try_get()` 立即返回成功或失败。
+
+两者没有谁更高级，取决于消费者的职责。一个专门等待输入事务的处理循环，用 `get()` 最清楚：没有数据就等，不需要反复轮询。一个需要同时检查两路 FIFO 的比较器，常先用 `try_get()` 判断两边是否都有数据，避免卡在一边而完全不处理另一边。
+
+常见错误是用 `try_get()` 写成紧密的无限循环。没有数据时它会立即失败，如果没有任何等待或让出时刻，仿真会在零时间内忙转，CPU 很高却没有任何进展。非阻塞不代表应该不断轮询。
+
+除了 `get()` 与 `try_get()`，FIFO 还常被用来做观察而不取走的检查。此时应使用 `peek()` 或 `try_peek()`：它们查看队首但不删除对象。适合场景是“只有当两条 FIFO 的键匹配时才正式取走”。如果直接 `get()` 了一边、另一边却尚未到达，已取出的对象就需要自己保存，原本由 FIFO 提供的顺序和深度信息也被破坏了。
+
+选择方式可以概括为：只要当前线程没有其他责任、只是等一条流，使用 `get()`；需要协调多条流或先检查键，使用 `try_get()` / `try_peek()`，但必须在没有数据时等待一个时钟、事件或其他明确条件，不能原地自旋。
+
+## 19.6 两路 FIFO 配对
+
+![](UVM_AI_assets/image-0148.png)
+
+![](UVM_AI_assets/image-0149.png)
+
+代码图 3：只有期望与实际都到达时才比较；任何一路缺数据都保留另一边等待。
+
+这个写法体现了 FIFO 的真正价值。期望先到时，它安静地在 FIFO 里等实际；实际先到时也一样。比较器不需要要求 monitor 或 predictor 以相同节奏工作。之后如果发现某一侧长期积压，队列深度就是直接的诊断信息。
+
+这里的示例按顺序把队首配对，前提是这两条流在协议层面严格保序。若实际结果可能乱序，FIFO 只能解决“到达节奏不同”，不能解决“谁和谁配对”；消费者应从 FIFO 取出事务后，再交给按 ID 或标签建表的记分板逻辑。第七天的乱序 Scoreboard 正是在这个边界上继续展开。
+
+结束时也要检查 FIFO 是否被排空。正常结束前，处理循环应有机会把已发布的事务全部消费；若 expected FIFO 或 actual FIFO 仍留有对象，说明某一条结果没有被比较。这个检查与 scoreboard 的遗留 expected 检查互补：一个告诉你缓冲里还有未消费对象，另一个告诉你已经消费但还未配对的期望。
+
+![结束时 drain 两路 FIFO](UVM_AI_assets/image-0150.png)
+
+图 6：结束检查同时查看两路 FIFO 深度和记分板遗留项，避免只发现其中一半的问题。
+
+## 19.7 读懂输出
+
+![](UVM_AI_assets/image-0151.png)
+
+![](UVM_AI_assets/image-0152.png)
+
+输出图 1：两路深度先后变化，等两边都有数据才产生一次比较。
+
+正常情况下，期望与实际的深度会小幅波动，但长期不应单边增长。期望 FIFO 持续增长说明实际路径太慢或根本断了；实际 FIFO 持续增长则说明预测路径没有跟上。两边都为零却没有比较，通常是取数循环没有真正运行。
+
+观察深度时还可以看增长速率。一开始短暂积压、随后回落，通常只是两条流存在正常延迟差；深度以固定斜率持续上升，说明产生速度长期大于消费速度。前者不一定要修，后者一定会最终造成内存膨胀或结束时大量遗留项。把深度随时间打印成周期性日志，比只在失败时打印一次更有诊断价值。
+
+## 19.8 真实调试：卡住、忙转、还是积压
+
+![FIFO 调试顺序](UVM_AI_assets/image-0153.png)
+
+图 7：先看哪个 FIFO 在增长，再区分阻塞等待与非阻塞忙转。
+
+遇到“scoreboard 没反应”时，先打印两路 `used()` 深度。深度为零说明上游没送数据；一边很大另一边为零说明数据流只走了一半；两边都有数据却没比较，才去查配对循环。若仿真时间不走而 CPU 占满，优先查 `try_get()` 的轮询逻辑。
+
+若仿真结束时仍有 FIFO 深度，不要直接把它全部归因于设计漏响应。先确认消费者线程是否仍在运行、是否因为 reset 或错误状态退出；再确认是否有一边 `get()` 后把事务暂存在本地等待另一边，导致 FIFO 表面为空但本地仍有未配对对象。完整的调试需要同时看 FIFO 深度、消费者本地缓存和 scoreboard 的 pending 表。
+
+## 19.9 小结
+
+analysis FIFO 把广播和处理解耦：monitor 继续发布，消费者按自己的节奏取数。`get()` 适合等待一条流，`try_get()` 适合协调多条流，但不能拿来零时间忙转。两路比较时，FIFO 深度本身就是最有价值的调试信息。
+
+再压缩成一条工程原则：FIFO 解决的是节奏和缓冲，配对仍由协议键决定；FIFO 保存的是对象句柄，快照仍由发布者负责；无界缓冲保护 monitor，却要求环境主动监控积压和结束 drain。把这三层责任分清，TLM 数据流才会既不丢事务，也不会悄悄失控。
+
+## 19.10 面试问答
+
+## 19.11 问题 1：analysis port 与 analysis FIFO 的主要区别是什么？
+
+回答：analysis port 是立即广播接口，本身不保存事务；analysis FIFO 是一个接收端缓冲，先接住广播的事务，再让消费者通过 `get()` 或 `try_get()` 按自己的节奏取。需要解耦到达时刻与处理时刻时，应使用 FIFO。
+
+问题 2：`get()` 与 `try_get()` 应该怎样选择，`try_get()` 的典型陷阱是什么？
+
+回答：单独等待一条输入流时用阻塞 `get()` 最直接；需要协调多路数据或不能阻塞当前线程时用 `try_get()`。陷阱是把 `try_get()` 放进无等待的无限循环，失败时会零时间忙转，CPU 很高但仿真没有进展。
+
+---
+
+# 20. UVM sequencer 仲裁：多个 sequence 为什么会卡在 start_item
+
+> 来源：https://mp.weixin.qq.com/s/Xr_r7c1Q0HG-1s2LuKoBlw
+> 作者：周漾
+> update 2026/09/15 21 : 54
+
+多个 sequence 共用一个 driver 时，`start_item` 不只是“准备一笔 request”。它会向 sequencer 请求 grant，也就是请求在下一次 driver 领取 item 时获得使用权。若 grant 未到，`start_item` 合法阻塞。理解这层仲裁，才能区分正常排队、flow-control 暂停、lock 独占和真正的 driver 死锁。
+
+## 20.1 先定义仲裁相关术语
+
+sequencer 是 sequence 与 driver 之间的事务仲裁器。grant 是 sequencer 给某个 sequence 的发送许可。arbitration queue 是等待 grant 的 sequence 队列。priority 是仲裁优先级。lock 是 sequence 在完成当前 item 后继续保留访问权的请求；grab 是立即抢占当前仲裁的更强请求。relevance 是 sequence 当前是否允许参与仲裁的业务条件，不是优先级。
+
+## 20.2 一条 item 从排队到 driver 的路径
+
+![仲裁概念](UVM_AI_assets/image-0154.png)
+
+图 1：多个 sequence 在 sequencer 前排队，只有获得 grant 的 sequence 才能完成 `start_item` 并交付 item 给 driver。
+
+`start_item(req)` 内部包含等待 grant 的阶段；grant 返回后 sequence 才填充并 `finish_item(req)`。driver 的 `get_next_item` 会领取已完成的 item。因而“卡在 start\_item”说明 sequence 尚未获得 grant，或 sequencer 虽给出 grant 但系统无法推进；它与 driver 已拿到 item 后等待 ready 是不同层级的问题。
+
+## 20.3 两个 sequence 竞争同一 driver
+
+![](UVM_AI_assets/image-0155.png)
+
+代码图 1：高优先级和普通 sequence 都通过同一 sequencer 请求 grant；先获 grant 的 sequence 才能调用 `finish_item`。
+
+真实验证环境中，配置流量、后台流量、错误注入和 reset 恢复流量可能同时存在。共用 sequencer 可以集中控制协议入口，但必须接受同一时刻只有一个 item 进入单一 driver 的事实。若高优先级 sequence 持续发 item，普通 sequence 可能长期得不到 grant；这不是 driver 错误，而是仲裁策略导致的饥饿风险。
+
+用 grant、issued、accepted 三个计数分别记录仲裁、交付和 driver 领取。grant 不增长说明 relevance、priority、lock 或仲裁队列问题；issued 增长但 accepted 不增长才检查 driver 与 sequencer 连接。
+
+## 20.4 flow-control relevance：允许发与轮到发不同
+
+在大型验证环境中，请求类别常有独立暂停条件，例如资源额度不足、未完成 response 达到阈值、接口处于 reset 或某一类 traffic 被临时冻结。sequence 可通过 `is_relevant` 表示“当前不应参加仲裁”，`wait_for_relevant` 等待恢复事件。
+
+![relevance 代码](UVM_AI_assets/image-0156.png)
+
+代码图 2：posted 与 non-posted 类 request 分别检查暂停条件；只有 relevant 的 sequence 才应等待 grant。
+
+这类模式来自复杂 UVC 中常见的请求类别流控。relevance 为假时，sequence 不应不断竞争 grant；它等待的是资源恢复。relevance 为真却卡在 `start_item` 时，才需要检查其他 sequence 的 priority、lock 或 driver 是否完成上一笔。将两类等待混在一起，会把 credit 限流误判为仲裁故障。
+
+## 20.5 lock 与 grab：为什么会放大卡死
+
+![](UVM_AI_assets/image-0157.png)
+
+代码图 3：lock 让 sequence 在一组不可分割操作之间保留访问权；完成后必须尽快 release。
+
+lock 适用于多个 item 必须连续发出的原子操作，例如“写地址后紧跟写数据”或“请求后立即读取状态”。但 sequence 取得 lock 后若等待一个永远不来的 response，其他 sequence 会全部停在 `start_item`。grab 更强，会立即抢占仲裁；只应在 reset 恢复或紧急错误处理等确实需要抢占的场景使用。
+
+实际调试时应打印 lock owner、当前 grant owner、等待队列长度和每个 sequence 的 relevance。只看 `start_item` 卡住无法判断是正常独占还是漏 release；这些状态才是仲裁问题的证据。
+
+## 20.6 pre\_do、mid\_do 与 post\_do：grant 前后还能做什么
+
+sequence 生命周期还有三个容易被忽略的回调。`pre_do` 发生在 sequence 获得 grant 之后、item randomize 之前，适合从 p\_sequencer 读取当前可用 credit、端口状态或模式，并把它们作为随机约束输入。`mid_do` 发生在 item randomize 之后、交付 driver 之前，适合检查随机结果或补充与当前 transaction 相关的序号。`post_do` 发生在 item 被 driver 接受后的后处理阶段。
+
+这三个回调不能替代 protocol 完成。尤其是 `post_do` 不表示 response 已返回；它只说明 item 发送流程走到了后处理边界。需要读数据或 completion 的 sequence 仍应显式等待 `get_response`。把 response 检查放进 mid\_do 或 post\_do，会在有接口延迟时得到不稳定结果。
+
+实战中可用 pre\_do 把“当前资源够不够”的判断放在 grant 已获得之后：这样不会在还没轮到当前 sequence 时消耗或锁定资源。mid\_do 则适合为每笔 item 写入唯一 tag，后续 driver 日志、monitor transaction 和 scoreboard pending 都可用该 tag 对齐。
+
+## 20.7 某一实际 UVC 的 driver 模式
+
+当前项目独立的大型验证实现都采用相同的 driver 分层：base driver 在 run\_phase 先执行 reset/clear\_signals，再进入永久 `get_next_item → drive_item → item_done` 循环；协议派生 driver 在 `drive_item` 中通过 virtual interface 等待 busy 解除、驱动 transaction 字段、等待接口完成、清除信号，并按 request ID 构造 response。这个共同模式说明 item 握手不是某个项目的模板习惯，而是将 UVM transaction 生命周期与真实接口完成边界对齐的可复用方法。
+
+对仲裁文章而言，它提供一个重要判断：sequencer 即使已经给 sequence grant，仍要等 base driver 的 `get_next_item` 领取；base driver 即使已领取，也必须等派生 driver 的协议完成后才能 `item_done`。因此 grant 等待、driver 领取等待、busy/ready 等待是三段独立进展，日志与计数必须分别记录。
+
+## 20.8 virtual sequencer：多个 agent 时仲裁在哪一层
+
+一个 physical sequencer 只服务一条 driver 通道。多个 agent 协同时，virtual sequencer 不直接向引脚发送 item；它保存多个子 sequencer 的句柄，让 virtual sequence 按系统级顺序启动各子 sequence。例如先在控制通道完成配置，再在数据通道发 traffic，最后在响应通道等待完成。
+
+![virtual sequencer 协调多个物理 sequencer](UVM_AI_assets/image-0158.png)
+
+代码图 4：virtual sequence 先在控制通道完成配置，再并行启动数据与响应 sequence；每条物理 sequencer 仍独立执行自己的 grant 与 lock 仲裁。
+
+virtual sequencer 不会自动解决物理通道仲裁。每个子 sequencer 仍有各自的 grant、lock 和 relevance。virtual sequence 若同时启动多个子 sequence，应明确哪些可并行、哪些必须等待；若一个子 sequence 卡在 `start_item`，虚拟层只能观察或超时处理，不能绕过该物理 sequencer 的资源规则。
+
+## 20.9 仲裁策略与 starvation
+
+常见策略包括 FIFO、随机和按优先级仲裁。FIFO 的可预测性强，但高优先级紧急 traffic 可能等待较久；固定优先级能快速服务关键请求，却可能让低优先级 sequence 永远得不到 grant，这种长期得不到服务称为 starvation。
+
+验证仲裁时不应只看“最终有没有发送”。应记录每个 sequence 从 relevant 到 grant 的等待周期，至少覆盖：高优先级持续流量下低优先级是否仍有机会；lock 释放后队列是否恢复；暂停解除后 relevant sequence 是否重新进入仲裁；随机仲裁在多次种子下是否满足既定公平性目标。把这些等待周期纳入 coverage 或性能统计，才能发现偶发饥饿。
+
+## 20.10 读懂输出
+
+![](UVM_AI_assets/image-0159.png)
+
+输出图 1：正常情况能看到 relevance 变真、grant 发放、item 交付和 driver 接收；lock 场景中其他 sequence 的 grant 会被延后。
+
+若 waiting 数增长、grant 长期不变，先看当前 owner 是否持 lock、是否已完成 item。若 relevance 长期为假，查看资源暂停原因。若 grant 已给出但 sequence 没有 `finish_item`，检查 sequence 是否在 randomize、pre\_do 或额外等待中停住。若 issued 已出现而 driver 未 accepted，才进入 driver 侧排查。
+
+## 20.11 DV 检查点
+
+为每个 sequence 记录 grant 等待时间，并给 lock 设置最大持有周期。relevance 从假变真后，应在合理周期内重新参与仲裁。对高优先级 traffic 建立饥饿测试：持续背景流量存在时，关键 sequence 仍必须获得 grant。reset 时清除或释放持锁 sequence，避免 reset 后旧 owner 继续阻塞新流量。
+
+## 20.12 真实调试流程
+
+![仲裁调试流程](UVM_AI_assets/image-0160.png)
+
+图 2：先判断 sequence 是否 relevant，再看 grant/lock，再看 finish\_item，最后才看 driver 接收。
+
+这个顺序能避免最常见误判：看到 `start_item` 等待就直接去查 driver。driver 可能完全正常，真正原因是 request 类别被暂停、另一个 sequence 持 lock、或高优先级流量持续占用仲裁器。
+
+## 20.13 面试问答
+
+## 20.14 问题 1：`start_item` 卡住是否一定代表 driver 卡住？
+
+回答：不是。它可能等待 grant、等待 relevance 恢复、被 lock 阻塞或被更高优先级 sequence 挤占。只有 item 已 `finish_item` 而 driver 没有 accepted 时，才重点检查 driver。
+
+## 20.15 问题 2：`lock` 与 `grab` 的区别是什么？
+
+回答：lock 请求在当前 item 完成后继续保留仲裁权；grab 立即抢占仲裁。两者都会影响其他 sequence 的 grant，因此必须有清晰 release 和超时策略。
+
+## 20.16 问题 3：`is_relevant` 与 priority 如何配合？
+
+回答：relevance 决定 sequence 当前是否有资格参与仲裁；priority 决定多个有资格 sequence 中谁更优先。relevance 为假时，priority 再高也不应获 grant。
+
+## 20.17 小结
+
+sequencer 仲裁把多个 sequence 的发送请求收束到一个 driver。`start_item` 的等待可能来自 grant、relevance、lock 或 priority，不等于接口握手失败。用 relevance、grant、issued、accepted 和 lock owner 分层观察，才能把“卡在 start\_item”定位到真正的等待边。

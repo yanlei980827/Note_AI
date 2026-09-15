@@ -37,6 +37,7 @@
 　　[3.7 实际部署的三种典型架构](#37-实际部署的三种典型架构)  
 　　[3.8 工程实践里的几个深坑](#38-工程实践里的几个深坑)  
 　　[3.9 写在最后](#39-写在最后)  
+[4. 100页的CPU微架构分析手册](#4-100页的cpu微架构分析手册)  
 
 <!-- toc-end -->
 
@@ -935,3 +936,25 @@ RK3506的AMP架构本质上是一颗芯片里塞进了两个世界：A7的Linux�
 ---
 
 关注「景芯SoC训练营」，更多芯片架构与嵌入式实战干货
+
+---
+
+# 4. 100页的CPU微架构分析手册
+
+> 来源：https://mp.weixin.qq.com/s/CTDXRUAXEiqWdfNuJee4Dg
+> 作者：亦安QAQ
+> update 2026/08/29 13 : 31
+
+不少人催我更新，其实还是草稿状态，之前写了一些底稿，看过我公众号的朋友都知道，我写文章有点口语化，所以让AI润色了一下，但是润色后又怪怪的，有点狗屎，先看看草稿，我最近精力也不在这些文档上面，后续我空闲再更新。别忘了给我一个star。
+
+github
+
+：https://github.com/DawnCarol/microarch/tree/master/doc
+
+doc/Microarchitecture Analysis0.01.pdf
+
+![](CPU_AI_assets/image-0014.png)
+
+![](CPU_AI_assets/image-0015.png)
+
+![](CPU_AI_assets/image-0016.png)

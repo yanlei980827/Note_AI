@@ -155,6 +155,112 @@
 　　　　[20.0.3 第三步：还原现场](#2003-第三步还原现场)  
 　　　　[20.0.4 第四步：解法其实 UVM 自己给了](#2004-第四步解法其实-uvm-自己给了)  
 　　　　[20.0.5 几句实操提醒](#2005-几句实操提醒)  
+[21. 芯片验证：Verification 和 Validation 到底有什么区别？](#21-芯片验证verification-和-validation-到底有什么区别)  
+　　[21.1 **一、两个核心问题**](#211-一两个核心问题)  
+　　[21.2 **二、Verification 更关注规格一致性**](#212-二verification-更关注规格一致性)  
+　　[21.3 **三、Validation 更关注真实目标是否成立**](#213-三validation-更关注真实目标是否成立)  
+　　[21.4 **四、二者的差异**](#214-四二者的差异)  
+　　[21.5 **五、为什么芯片项目里两者容易混淆？**](#215-五为什么芯片项目里两者容易混淆)  
+　　[21.6 **六、对工程师有什么启发？**](#216-六对工程师有什么启发)  
+　　[21.7 **总结**](#217-总结)  
+[22. 从 IP 验证切到 SOC 验证，我才发现自己之前只是在”做局部题”](#22-从-ip-验证切到-soc-验证我才发现自己之前只是在做局部题)  
+　　[22.1 SOC 覆盖率的三个真正关注点](#221-soc-覆盖率的三个真正关注点)  
+　　[22.2 为什么很多工程师切到 SOC 验证会不适应](#222-为什么很多工程师切到-soc-验证会不适应)  
+[23. IP验证如何转向SoC验证](#23-ip验证如何转向soc验证)  
+[24. \[验证平台\]时钟产生模块优化（二）](#24-验证平台时钟产生模块优化二)  
+[25. \[验证平台\]时钟产生器](#25-验证平台时钟产生器)  
+[26. 什么是BootROM？为什么芯片启动离不开它](#26-什么是bootrom为什么芯片启动离不开它)  
+　　[26.1 芯片上电后，谁来执行第一段代码](#261-芯片上电后谁来执行第一段代码)  
+　　[26.2 BootROM是什么](#262-bootrom是什么)  
+　　[26.3 BootROM通常负责哪些事情](#263-bootrom通常负责哪些事情)  
+　　[26.4 BootROM和Bootloader有什么区别](#264-bootrom和bootloader有什么区别)  
+　　[26.5 为什么BootROM一旦出错很难补救](#265-为什么bootrom一旦出错很难补救)  
+　　[26.6 为什么BootROM也需要专门验证？](#266-为什么bootrom也需要专门验证)  
+　　[26.7 总结DMXAI芯片验证](#267-总结dmxai芯片验证)  
+[27. 从精确控制到放手：SOC验证工程师的第一课](#27-从精确控制到放手soc验证工程师的第一课)  
+　　[27.1 激励源的代际更替](#271-激励源的代际更替)  
+　　[27.2 Chiplet时代的验证困境](#272-chiplet时代的验证困境)  
+　　[27.3 你需要重建思维模型](#273-你需要重建思维模型)  
+　　[27.4 控制的幻觉与真实的价值](#274-控制的幻觉与真实的价值)  
+[28. 什么是Assertion？把芯片设计规则变成自动检查](#28-什么是assertion把芯片设计规则变成自动检查)  
+　　[28.1 为什么光靠看波形不够](#281-为什么光靠看波形不够)  
+　　[28.2 Assertion是什么](#282-assertion是什么)  
+　　[28.3 Assertion通常检查哪些规则](#283-assertion通常检查哪些规则)  
+　　[28.4 Assertion和Testbench是什么关系](#284-assertion和testbench是什么关系)  
+　　[28.5 Assertion为什么也能用于Formal Verification](#285-assertion为什么也能用于formal-verification)  
+　　[28.6 Assertion没有报错，就说明验证到了吗？](#286-assertion没有报错就说明验证到了吗)  
+　　[28.7 什么样的Assertion才真正有价值](#287-什么样的assertion才真正有价值)  
+　　[28.8 总结](#288-总结)  
+[29. SoC级SRAM/ROM验证方法](#29-soc级sramrom验证方法)  
+[30. 一个中断，从外设到CPU，中间经过了什么？](#30-一个中断从外设到cpu中间经过了什么)  
+　　[30.1 外设有了数据，中断请求怎么产生？](#301-外设有了数据中断请求怎么产生)  
+　　[30.2 状态有了，为什么还没有中断？](#302-状态有了为什么还没有中断)  
+　　[30.3 中断控制器怎样决定通知哪个CPU？](#303-中断控制器怎样决定通知哪个cpu)  
+　　[30.4 CPU收到请求，怎样进入处理函数？](#304-cpu收到请求怎样进入处理函数)  
+　　[30.5 进入ISR后，我们具体要处理什么？](#305-进入isr后我们具体要处理什么)  
+　　[30.6 清了外设状态，为什么还没有结束？](#306-清了外设状态为什么还没有结束)  
+　　[30.7 再来一次事件，这条链路还能走通吗？](#307-再来一次事件这条链路还能走通吗)  
+[31. 芯片设计中，Reset释放时为什么容易出问题？](#31-芯片设计中reset释放时为什么容易出问题)  
+　　[31.1 进入复位和退出复位，要求并不一样](#311-进入复位和退出复位要求并不一样)  
+　　[31.2 复位释放后，状态位未必同步更新](#312-复位释放后状态位未必同步更新)  
+　　[31.3 同步释放，要同步到哪个时钟](#313-同步释放要同步到哪个时钟)  
+　　[31.4 时钟没恢复，本地复位也可能释放不了](#314-时钟没恢复本地复位也可能释放不了)  
+　　[31.5 验证要看到退出复位后的状态](#315-验证要看到退出复位后的状态)  
+[32. 只读一个寄存器，为什么也可能改变芯片状态？](#32-只读一个寄存器为什么也可能改变芯片状态)  
+　　[32.1 一次读取，也可以清掉状态](#321-一次读取也可以清掉状态)  
+　　[32.2 脚本先读了，驱动还能看到什么](#322-脚本先读了驱动还能看到什么)  
+　　[32.3 读FIFO时，数据也可能被取走](#323-读fifo时数据也可能被取走)  
+　　[32.4 不能只看RO，还要读访问说明](#324-不能只看ro还要读访问说明)  
+　　[32.5 验证时，也要检查读取之后](#325-验证时也要检查读取之后)  
+[33. 芯片寄存器里的Reserved bit，为什么不能随便写？](#33-芯片寄存器里的reserved-bit为什么不能随便写)  
+　　[33.1 只改一个bit，为什么也会写到保留位](#331-只改一个bit为什么也会写到保留位)  
+　　[33.2 写回之前，要确认哪些要求](#332-写回之前要确认哪些要求)  
+　　[33.3 换一版芯片，旧写法可能出问题](#333-换一版芯片旧写法可能出问题)  
+　　[33.4 验证时，把手册里的要求落到检查上](#334-验证时把手册里的要求落到检查上)  
+[34. GPIO 概念与 PL061 控制器实现·学习笔记](#34-gpio-概念与-pl061-控制器实现学习笔记)  
+　　[34.1 GPIO 概述](#341-gpio-概述)  
+　　　　[34.1.1 关于 PL061 GPIO](#3411-关于-pl061-gpio)  
+　　　　[34.1.2 特性清单](#3412-特性清单)  
+　　　　[34.1.3 整体框图](#3413-整体框图)  
+　　[34.2 功能块与双模式控制](#342-功能块与双模式控制)  
+　　　　[34.2.1 五大寄存器类](#3421-五大寄存器类)  
+　　　　[34.2.2 模式控制：软件 vs 硬件](#3422-模式控制软件-vs-硬件)  
+　　　　[34.2.3 硬件控制接口的三组信号](#3423-硬件控制接口的三组信号)  
+　　[34.3 数据寄存器与地址掩码](#343-数据寄存器与地址掩码)  
+　　　　[34.3.1 GPIODATA：一个寄存器占 256 个地址](#3431-gpiodata一个寄存器占-256-个地址)  
+　　　　[34.3.2 写操作的地址掩码](#3432-写操作的地址掩码)  
+　　　　[34.3.3 读操作的地址掩码](#3433-读操作的地址掩码)  
+　　　　[34.3.4 GPIODIR：方向寄存器](#3434-gpiodir方向寄存器)  
+　　　　[34.3.5 复位与初始化](#3435-复位与初始化)  
+　　[34.4 中断系统](#344-中断系统)  
+　　　　[34.4.1 七个中断寄存器](#3441-七个中断寄存器)  
+　　　　[34.4.2 触发链：IS → IBE → IEV](#3442-触发链is-ibe-iev)  
+　　　　[34.4.3 状态与清除：RIS → MIS → IC](#3443-状态与清除ris-mis-ic)  
+　　　　[34.4.4 中断初始化顺序（避免伪中断）](#3444-中断初始化顺序避免伪中断)  
+　　[34.5 寄存器总览与标识](#345-寄存器总览与标识)  
+　　　　[34.5.1 寄存器一览](#3451-寄存器一览)  
+　　　　[34.5.2 数据与方向寄存器](#3452-数据与方向寄存器)  
+　　　　[34.5.3 中断寄存器](#3453-中断寄存器)  
+　　　　[34.5.4 模式控制寄存器](#3454-模式控制寄存器)  
+　　　　[34.5.5 标识寄存器](#3455-标识寄存器)  
+　　[34.6 信号与总结](#346-信号与总结)  
+　　　　[34.6.1 AMBA APB 信号](#3461-amba-apb-信号)  
+　　　　[34.6.2 片上信号](#3462-片上信号)  
+　　　　[34.6.3 到 pad 的信号](#3463-到-pad-的信号)  
+　　　　[34.6.4 一份典型操作的编程清单](#3464-一份典型操作的编程清单)  
+　　　　[34.6.5 全书主线](#3465-全书主线)  
+[35. 芯片寄存器里的状态位，为什么要写1清零？](#35-芯片寄存器里的状态位为什么要写1清零)  
+　　[35.1 状态位不是普通变量](#351-状态位不是普通变量)  
+　　[35.2 写1清零，是为了只清该清的状态](#352-写1清零是为了只清该清的状态)  
+　　[35.3 不能把所有寄存器都按一种写法处理](#353-不能把所有寄存器都按一种写法处理)  
+　　[35.4 硬件又来一个事件怎么办](#354-硬件又来一个事件怎么办)  
+[36. Boot Mode是什么？芯片为什么会走错启动路径？](#36-boot-mode是什么芯片为什么会走错启动路径)  
+　　[36.1 Boot Mode不是软件选项，而是启动方向](#361-boot-mode不是软件选项而是启动方向)  
+　　[36.2 Boot Mode通常从哪里来](#362-boot-mode通常从哪里来)  
+　　[36.3 为什么芯片会走错启动路径](#363-为什么芯片会走错启动路径)  
+　　[36.4 怎么判断Boot Mode有没有走对](#364-怎么判断boot-mode有没有走对)  
+　　[36.5 提前留下判断启动路径的证据](#365-提前留下判断启动路径的证据)  
+　　[36.6 先确认芯片到底去了哪里](#366-先确认芯片到底去了哪里)  
 
 <!-- toc-end -->
 
@@ -2323,8 +2429,7 @@ VIP的sequence做好之后，需要把新增文件接入公司现有的编译脚
 
 > 来源：https://mp.weixin.qq.com/s/_36J3o3_XOXFjoPK4qjVag
 > 作者：芯片验证那些事儿
-> update 2026/08/22 18 : 13
-> **已截图**
+> update 2026/08/29 13 : 38
 
 做验证的都知道，reset test 是最容易出幺蛾子的一类 case。功能 case 跑得好好的，一加随机复位，log 里立马冒出一堆没见过的 UVM\_ERROR。
 
@@ -2332,18 +2437,11 @@ VIP的sequence做好之后，需要把新增文件接入公司现有的编译脚
 
 ```
 1. [
-   [
-   SEQREQZMB
    SEQREQZMB
    ]
-   ]
-   The
    The
     task responsible
-    task responsible
    for
-   for
-    requesting a wait_for_grant on
     requesting a wait_for_grant on
 2. sequencer 'uvm_test_top.m_env.m_xxx_agent.m_sequencer'for sequence
 3. 'case_rstn_rand_vseq' has been killed, to avoid a deadlock the sequence
@@ -2360,16 +2458,6 @@ VIP的sequence做好之后，需要把新增文件接入公司现有的编译脚
 
 ```
 function int uvm_sequencer_base::m_choose_next_request();
-function
-function
-int
-int
-uvm_sequencer_base
-uvm_sequencer_base
-::
-m_choose_next_request
-m_choose_next_request
-()
   int i, temp;  int avail_sequence_count;  int sum_priority_val;  integer avail_sequences[$];  integer highest_sequences[$];  int highest_pri;  string  s;
   avail_sequence_count = 0;
   grant_queued_locks();
@@ -2410,7 +2498,6 @@ endfunction
 
 ```
 // Function- stop_sequences
-// Function- stop_sequences
 //// Tells the sequencer to kill all sequences and child sequences currently// operating on the sequencer, and remove all requests, locks and responses// that are currently queued.  This essentially resets the sequencer to an// idle state.//function void uvm_sequencer::stop_sequences();  REQ t;  super.stop_sequences();  sequence_item_requested  = 0;  get_next_item_called     = 0;  // Empty the request fifo  if (m_req_fifo.used()) begin    uvm_report_info(get_full_name(), "Sequences stopped.  Removing request from sequencer fifo");    while (m_req_fifo.try_get(t));  endendfunction
 ```
 
@@ -2424,9 +2511,2360 @@ endfunction
 
 欢迎对UVM感兴趣的朋友，添加下面小编微信，邀请您加入《UVM技术讨论群》,备注"UVM"哦。
 
-![](SoC验证_AI_assets/image-0046.jpg)
+![](SoC验证_AI_assets/image-0055.jpg)
 
 - 报错 ID 是最短路径。UVM 的 error ID 都是唯一字符串，直接去 `uvm_sequencer_base.svh`、 `uvm_sequencer.svh` 里 grep，比在搜索引擎里翻十页有用得多。
 - 别只看报错点，要看调用链。停在 `m_choose_next_request()` 只知道"队列脏了"，追到 `get_next_item` 才知道"是 driver 下一次握手把它引爆的"。
 - UVM 报的 error，答案常常就写在它自己的处理代码里。sequencer 用 `remove_sequence_from_queues` 兜底，那就说明清队列是合法动作， `stop_sequences()` 只是把这件事提前到复位那一刻做。
 - reset test 的通病都是同一类：复位打断了正在进行的握手/事务，而各个组件的状态没有同步复位。sequencer 队列只是其中一处，driver 的 `item_done`、monitor 的半截 transaction、scoreboard 里的 pending 项，都值得顺手检查一遍。
+
+---
+
+# 21. 芯片验证：Verification 和 Validation 到底有什么区别？
+
+> 来源：https://mp.weixin.qq.com/s/voKUm2KoFq4bQTibpk90mA
+> 作者：DMXAI
+> update 2026/08/29 11 : 40
+
+在芯片行业里，Verification和Validation经常被一起提到，也经常被混着用。很多时候，它们都会被翻译成“验证”。但在真实项目中， Pre-silicon verification、Post-silicon validation、System validation、Software validation这些说法背后，关注的问题并不完全一样。如果用一句话概括： Verification 关注的是：设计是否按照规格正确实现。 Validation 关注的是：系统是否满足真实使用场景和目标。
+
+这两个问题看起来接近，但代表的是两种不同的工程视角。Verification 更靠近规格、设计实现和缺陷收敛；Validation 更靠近真实系统、真实场景和最终可用性。
+
+## 21.1 **一、两个核心问题**
+
+在系统工程和芯片研发语境中，经常用两句话区分 Verification 和 Validation：
+
+- Verification: Are we building it right?我们是否把它正确地实现了？
+- Validation: Are we building the right thing?我们做出来的东西，是否真的是需要的东西？
+
+![](SoC验证_AI_assets/image-0047.jpg)
+
+放到芯片研发里，可以这样理解：
+
+**Verification** 更关注 RTL、IP、SoC、Firmware model 是否符合 specification、协议规范和架构约束。
+
+**Validation** 更关注芯片或系统放到真实场景里，是否满足性能、可靠性、兼容性、可用性和用户目标。
+
+前者更像是“对照规格逐项证明正确性”。后者更像是“回到真实系统目标，判断最终结果是否成立”。这不是谁更重要的问题，而是它们解决的风险不同。
+
+## 21.2 **二、Verification 更关注规格一致性**
+
+在 IC 研发中，Verification 通常更靠近设计实现阶段，尤其是在 pre-silicon 阶段。验证工程师会基于设计规格、协议规范、架构文档和功能需求，搭建 testbench，编写 test case、checker、assertion，收集 coverage，并通过 simulation、formal verification、emulation、FPGA prototype 等手段，证明设计实现是否符合预期。
+
+Verification 很重视**可证明性**。它需要 test plan、coverage model、assertion、scoreboard、reference model、regression 和 bug tracking。它的核心目标不是证明几个典型场景能跑，而是系统性地降低设计缺陷风险。
+
+## 21.3 **三、Validation 更关注真实目标是否成立**
+
+Validation 更靠近系统集成、原型平台、硅后测试、实验室环境和真实 workload。它关心的问题不只是“设计有没有符合规格”，还包括：
+
+**这个系统放到真实使用场景里，是否真的达到了目标？**
+
+例如，一个 AI SoC 的 DDR controller 在 RTL verification 中已经通过协议检查，读写顺序也符合设计文档。但到了 system validation 阶段，还需要继续看：
+
+- 跑真实模型推理时，带宽是否满足需求；
+
+- 长时间压力测试下是否稳定；
+- Linux driver、runtime 和 firmware 是否协同正常；
+- 温度升高后性能是否出现不可接受的波动；
+- 多任务并发时 QoS 是否符合系统预期；
+- 目标应用场景关心的关键指标是否达标？
+
+这些问题不一定都能在 RTL testbench 中完整地回答。因为它们涉及真实软件、真实板级环境、真实 I/O、真实功耗热行为，以及更长时间尺度上的系统运行。因此，Validation 的证据通常来自：
+
+- prototype；
+
+- emulation；
+- FPGA platform；
+- silicon board；
+- lab measurement；
+- system workload；
+- bring-up log；
+- User scenario test.
+
+Validation 更关注最终系统是否可用、稳定、可靠，并且是否真正满足产品和用户目标。
+
+## 21.4 **四、二者的差异**
+
+| 维度 | Verification | Validation |
+| --- | --- | --- |
+| 核心问题 | 是否正确实现规格 | 是否满足真实使用目标 |
+| 常见阶段 | 多在 Pre-silicon | 多在 Prototype、Post-silicon 和系统阶段 |
+| 主要依据 | Specification、协议、架构约束 | Use case、系统需求、性能目标、可靠性目标 |
+| 常见方法 | Simulation、Formal、UVM、Assertion、Coverage、Regression | Bring-up、系统测试、真实 workload、实验室测量、兼容性测试 |
+| 关注证据 | 功能覆盖率、代码覆盖率、断言结果、bug 收敛 | 性能数据、稳定性结果、功耗热表现、系统日志、用户场景结果 |
+| 典型问题 | 设计有没有按规格做对 | 规格定义的东西是不是解决了真实问题 |
+
+**这个表里最容易被忽略的一点是：**
+
+**Validation 有时会反过来挑战规格本身。**
+
+也就是说，Verification 可能已经证明“设计符合规格”，但 Validation 仍然可能发现“规格本身不够好”。比如：
+
+规格要求某个接口在理论带宽下达到目标，但真实 workload 中的数据访问模式并不理想；规格定义了某种错误恢复流程，但系统软件实际处理起来过于复杂，导致 bring-up 和维护成本很高；规格中假设某个使用场景很少发生，但真实客户环境中它反而频繁出现。
+
+这时问题不一定是 RTL 写错了，而可能是架构假设、系统需求或使用场景理解不充分。
+
+## 21.5 **五、为什么芯片项目里两者容易混淆？**
+
+第一个原因是中文里它们都常被叫作“验证”。如果不区分语境，功能验证、系统验证、硅后验证、软件验证听起来都差不多。但在英文工程语境中，Verification 和 Validation 背后的问题意识不同：
+
+- Verification 更强调 **conformance to specification**；
+- Validation 更强调 fitness for intended use。
+
+第二个原因是工具链和阶段会重叠。比如：
+
+FPGA prototype 既可以用于 pre-silicon verification，也可以用于 software validation。Emulation 既能验证 RTL 系统行为，也能提前跑 firmware 和 driver。硅后实验室测试既会发现 validation 问题，也可能暴露 pre-silicon verification 漏掉的 RTL bug。
+
+所以不能简单按工具划线，而要看这次活动到底在回答什么问题。
+
+如果目标是证明设计符合 specification，这是 Verification。如果目标是证明系统满足真实场景和用户目标，这是 Validation。
+
+## 21.6 **六、对工程师有什么启发？**
+
+对验证工程师来说，理解 Validation 很重要。因为很多 RTL 验证的价值，最终要在系统场景里体现。一个在 testbench 中覆盖充分的功能，如果没有对应的真实 workload、软件路径和系统约束，可能仍然无法说明系统风险已经充分收敛。
+
+对软件、Firmware 和 Bring-up 工程师来说，理解 Verification 也很重要。因为硅后遇到的问题，很多并不只是板级环境中的孤立现象，而是可以追溯到规格假设、RTL 行为、协议边界、异常路径覆盖不足和可观测性设计不足。
+
+成熟的芯片团队不会把 Verification 和 Validation 割裂开。它们会尽量让验证资产向后延伸，让系统场景向前移动。例如：
+
+- 把真实 workload 抽象成 pre-silicon 可运行的测试；
+
+- 把driver smoke test 提前放到emulation或FPGA prototype上运行；
+
+- 把硅后 error log 和 trace 机制提前纳入设计和验证计划；
+
+- 让 coverage、debug、bring-up log 和系统测试结果形成反馈闭环。
+
+这样做的目的不是增加流程，而是更早发现系统风险。
+
+## 21.7 **总结**
+
+**Verification 证明“设计是否按规格做对了”，Validation 证明“系统是否真正满足使用目标”。**
+
+**前者强调规格一致性、覆盖率和缺陷收敛；后者强调真实场景、系统效果和最终可用性。**
+
+你在项目中更常遇到哪类问题？
+
+是**Verification 阶段漏掉的设计 bug**，还是**Validation 阶段才暴露的系统目标偏差**？
+
+下一篇我们准备聊聊：Chiplet 时代，为什么验证复杂度会显著上升？敬请期待。
+
+---
+
+# 22. 从 IP 验证切到 SOC 验证，我才发现自己之前只是在”做局部题”
+
+> 来源：https://mp.weixin.qq.com/s/QQo58CR6Asoq27F9a6rq9A
+> 作者：make ic
+> update 2026/08/29 12 : 59
+
+---
+
+做了这么多年 IP 验证，有一天 leader 说：”去接手 SOC 验证吧。”
+
+IP 验证的核心诉求很清楚——**把这块逻辑跑透**。
+
+Code coverage 告诉你哪些代码路径没走到，functional coverage 告诉你哪些设计意图没覆盖到。两者配合，你大概能知道这个 IP 的”健康度”。
+
+这套方法论没错，但它的隐含前提是：**验证边界是固定的，你知道自己在验证什么。**
+
+SOC 验证不满足这个前提。
+
+![](SoC验证_AI_assets/image-0048.png)
+
+一个典型 SOC 里可能有几十个 IP，每个 IP 都带着自己的地址空间、中断线、DMA 通道、电源域。它们之间的交互不是”预先设计好的功能”，而是**涌现出来的系统行为**。
+
+你不能用 line coverage 来衡量”CPU 通过 AXI 总线读 UART 寄存器这条路径有没有被覆盖”。这两件事压根不在同一个抽象层次上。
+
+---
+
+## 22.1 SOC 覆盖率的三个真正关注点
+
+**第一，连接性 coverage。**
+
+最基本的问题：所有该连的线，真的连对了吗？
+
+听起来很蠢，但集成阶段的 bug 里，wire 接错、bit 反向、极性搞反——这类问题占比高得让人沉默。连接性验证不是”低级工作”，漏掉它就是在赌运气。
+
+**第二，系统场景 coverage。**
+
+SOC 真正的价值在于多个子系统协同工作。一个摄像头 SoC，ISP + CPU + DDR + DMA 同时跑的时候会不会死锁？这不是任何单个 IP 的问题，是系统级行为。
+
+> 场景举例：DMA 突发传输期间 CPU 发起中断，结果 arbiter 饿死了某个 master——这种 bug 只在特定 traffic pattern 下才能复现。
+
+这类场景必须人工定义，没有工具能自动帮你枚举”什么是有意义的系统场景”。这是 SOC 验证最考验工程师判断力的地方。
+
+**第三，地址空间 coverage。**
+
+每个寄存器有没有被访问到？边界地址有没有测过？地址解码逻辑对不对？
+
+这块看起来机械，但漏测的后果是灾难性的——软件起来之后跑到错误的地址空间，调试起来极其痛苦。
+
+---
+
+## 22.2 为什么很多工程师切到 SOC 验证会不适应
+
+**因为 IP 验证给人一种”覆盖率能收敛”的错觉。**
+
+IP 验证里，你努力够，代码覆盖率能到 99%，剩下 1% 你能解释清楚为什么 waive。这是一种可量化、有终点感的工作。
+
+SOC 验证没有这种安慰。
+
+系统场景是开放的，地址空间可以无限细化，集成 bug 永远在你想不到的地方冒出来。覆盖率收敛更像一个工程判断，而不是一个数字达标。
+
+这不是 SOC 验证的缺陷，这是它的本质。**复杂系统的验证本来就是一个不完备问题。**
+
+接受这一点，才能在 SOC 验证里做出真正有价值的判断，而不是靠刷数字自我感动。
+
+---
+
+AI 芯片的爆发让 SOC 复杂度急剧上升。以 NVIDIA Blackwell、Apple M 系列这类产品为例，片上集成的 IP 数量、互联拓扑的复杂度已经超出了传统验证方法的舒适区。
+
+正因如此，近几年 formal verification 在 SOC 连接性验证上的应用越来越受重视，部分团队开始用 ML 辅助生成系统级 test scenario。但工具再好，**工程师对系统行为的理解判断**仍然是无法被替代的那一环。
+
+---
+
+做 IP 验证是在解一道有标准答案的题。
+
+做 SOC 验证更像是在给一个你永远不能完全理解的系统做体检——你只能尽量不漏掉重要的东西。
+
+两种工作都需要，但需要的能力不太一样。
+
+---
+
+# 23. IP验证如何转向SoC验证
+
+> 来源：https://mp.weixin.qq.com/s/aO3YZnk-9b3d2k9TZ81K9Q
+> 作者：芯想事珹
+> update 2026/08/29 13 : 01
+
+![](SoC验证_AI_assets/image-0049.gif)
+
+很多做过 IP 级验证的，在进入 SoC 验证时会发现：UVM 还是那个 UVM，寄存器模型、Monitor、Scoreboard 也并不陌生，但问题的重心已经变了。要建立从模块级到系统级的验证思维，并梳理一条可执行的进阶路径。
+
+IP 验证关注“一个模块是否足够正确”，SoC 验证关注“整个系统是否真的跑得起来”。从 IP 到 SoC，难点不只是环境变大，而是验证视角从局部时序切换到系统行为。
+
+**核心思维差异**
+
+IP 验证更像显微镜。它盯住的是单个 IP 的内部功能、边界条件和状态机覆盖，验证环境通常由 UVM 充当总线 Master，通过 Driver 主动向 DUT 灌激励，目标是尽可能穷举 IP 的行为边界。
+
+SoC 验证更像望远镜。它关注的是系统集成、互联路径和真实应用场景，真实 CPU RTL 会成为总线 Master，验证重点转向 CPU 能否正确访问寄存器、中断能否被响应、多 IP 并发时总线是否竞争或死锁等系统级问题。
+
+![](SoC验证_AI_assets/image-0050.png)
+
+**SoC验证完整流程**
+
+SoC 验证通常遵循“自顶向下规划、自底向上集成”的逻辑。文章将完整流程拆成六个关键阶段：
+
+1. 制定验证计划：提取 SoC 功能点，覆盖连通性、启动复位、中断、功耗时钟、多 IP 协同等系统级测试点。
+
+2. 搭建验证环境：完成 CPU、总线、IP、Memory 的 Top 层拼接；外部接口如 I2C、SPI、PCIe 挂载 UVM VIP，并配置为 Slave 或外部 Master 模式；同时挂载 Memory 模型用于存储 C 程序。
+
+3. 冒烟测试：运行极简汇编或 C 代码，验证 CPU 到总线再到 Memory 的核心通路是否畅通。
+
+4. 模块互联验证：围绕连通性、中断、DMA 等单项能力逐步验证模块之间的系统级协作。
+
+5. 软硬件协同验证：由验证工程师或底层软件工程师编写 C 驱动代码，模拟真实软件行为来配置和驱动硬件。
+
+6. 网表仿真与签核：带 SDF 延时文件跑核心用例，检查时序与 X 态传播，覆盖率达标后进入流片签核。
+
+**SoC验证离不开C程序**
+
+这是 IP 工程师转向 SoC 验证时最容易卡住的地方：为什么不能像 IP 验证那样继续让 UVM Driver 直接发总线事务？
+
+原因在于 SoC 里已经有真实 CPU。总线时序不再由 UVM Driver 人工制造，而是由 CPU 硬件逻辑自然产生。验证工程师需要把 C 程序编译成机器码，加载到 SoC 的 Memory 中，让 CPU 执行这些机器码，从而产生真实的软件驱动行为。
+
+因此，在 SoC 验证中，C 程序本质上替代了 IP 验证里的 uvm\_sequence：它不再是单纯的软件代码，而是驱动整个 SoC 运转的系统级激励源。
+
+**C与UVM如何配合**
+
+SoC 验证并不是抛弃 UVM，而是让 C 和 UVM 分工协作。文章总结了三种典型配合方式：
+
+1. UVM 做“裁判与陪练”
+
+在这种模式下，总线 UVM Driver 会被弱化或移除，C 程序负责配置外设和发起系统行为；UVM 保留 Monitor 与 Scoreboard，被动接收数据、观察总线行为，并完成结果比对和校验。
+
+2. 通过握手机制实现同步
+
+C 和 UVM 可以通过共享寄存器、共享内存或中断信号进行双向同步。比如 C 完成配置后写入特定标识通知 UVM 就绪，UVM 完成数据准备后写状态 Flag 或触发中断，再通知 C 继续执行。
+
+3. 混合编译与仿真执行
+
+实际运行时，C 程序会先通过交叉编译器转换成 .hex 或 .elf 机器码。仿真启动时，UVM 通过后门方式将机器码加载到 SoC 内存；CPU 启动后执行 C 代码，UVM 则同步进入监控、采集和校验阶段。
+
+**转型建议**
+
+从IP验证转到SoC验证，并不是把原来会的全部扔掉重来。IP级积累的那些东西，像寄存器抽象层、Scoreboard、Monitor、覆盖率建模这些，到了SoC级照样能用，不用推翻重学。真正需要调整的是看问题的角度，原来盯着一个模块的时序对不对、边界测没测全，现在得看整个系统在真实软件驱动下能不能跑起来。需要补的功课主要是C语言编程、理解CPU怎么访问内存和响应中断，还有C程序的编译加载脚本这些工程化的东西。思维方式也要跟着变，不再是关心单个IP有没有bug，而是多问一句：多个模块凑在一起，用真正的软件去驱动它，到底能不能协同完成系统任务。
+
+**结 语**
+
+要先完成视角切换，再理解完整流程，最后掌握 C 与 UVM 的协同方式。对有 IP 验证基础的工程师来说，这不是从零开始，而是把已有验证能力放到更大的系统上下文里重新使用。
+
+**END**
+
+![](SoC验证_AI_assets/image-0051.jpg)
+
+---
+
+# 24. [验证平台]时钟产生模块优化（二）
+
+> 来源：https://mp.weixin.qq.com/s/Z8f7G6OcL3t2L9b6PFOYxw
+> update 2026/08/29 13 : 08
+
+`ifndef CREATE\_CLK\_MODULE\_SV
+
+`define CREATE\_CLK\_MODULE\_SV
+
+`timescale 1ns / 1fs
+
+//============================================
+
+// 时钟产生宏（随机相位偏移 + 频率抖动）
+
+// 用法: `CREATE\_CLK(clk\_ref, 10.0, 0.0, 50.0, 100)
+
+//   - clk\_ref    : 时钟信号名
+
+//   - 10.0       : 周期，单位ns
+
+//   - 0.0        : 相位偏移（可选），单位ns
+
+//   - 50.0       : 占空比（可选），百分比
+
+//   - 100        : 频率抖动（可选），单位ppm
+
+// 说明: 启动时自动叠加1~10ns随机相位偏移
+
+//       运行时每个周期按ppm值产生频率抖动
+
+//============================================
+
+`define CREATE\_CLK(clk\_name, period, phase=0.0, duty=50.0, jitter\_ppm=0) \
+
+    gen\_clk\_module #(period,phase,duty,jitter\_ppm) \_\_``clk\_name``\_gen(clk\_name);
+
+//`define CREATE\_CLK(clk\_name, period, phase=0.0, duty=50.0, jitter\_ppm=0) \
+
+module gen\_clk\_module #(
+
+    parameter real period, 
+
+    parameter real phase      = 0.0, 
+
+    parameter real duty       = 0.0, 
+
+    parameter int  jitter\_ppm = 0 
+
+    ) 
+
+    (
+
+    clk\_name
+
+    );
+
+  output clk\_name;
+
+  logic clk\_tmp;
+
+  real \_\_clk\_name\_jit;
+
+  real \_\_clk\_name\_start\_phase;
+
+  real \_\_clk\_name\_h\_period\_phase;
+
+  real \_\_clk\_name\_l\_period\_phase;
+
+  bit  \_\_clk\_name\_r\_select;
+
+  assign clk\_name = clk\_tmp;
+
+  initial begin 
+
+    clk\_tmp = 1'b0;
+
+    \_\_clk\_name\_start\_phase = (phase \* 1000 + $urandom\_range(1000, 10000)) \* 1ps;
+
+    #\_\_clk\_name\_start\_phase; 
+
+    forever begin 
+
+      \_\_clk\_name\_jit = (jitter\_ppm > 0) ? ((period) \* (jitter\_ppm) \* ($urandom\_range(1000, 2000) - 1000) / 1000.0) : 0.0; 
+
+      \_\_clk\_name\_r\_select = $urandom\_range(1,1); 
+
+      clk\_tmp = 1'b1; 
+
+      if(\_\_clk\_name\_r\_select) \_\_clk\_name\_h\_period\_phase = ((period) \* 1000000.0 \* ((duty) / 100.0) + \_\_clk\_name\_jit) \* 1fs; 
+
+      else  \_\_clk\_name\_h\_period\_phase = ((period) \* 1000000.0 \* ((duty) / 100.0) - \_\_clk\_name\_jit) \* 1fs; 
+
+      $display("h:%f",\_\_clk\_name\_h\_period\_phase); 
+
+      #\_\_clk\_name\_h\_period\_phase; 
+
+      clk\_tmp = 1'b0; 
+
+      if(\_\_clk\_name\_r\_select) \_\_clk\_name\_l\_period\_phase = ((period) \* 1000000.0 \* ((100.0 - duty) / 100.0) + \_\_clk\_name\_jit) \* 1fs; 
+
+      else  \_\_clk\_name\_l\_period\_phase = ((period) \* 1000000.0 \* ((100.0 - duty) / 100.0) - \_\_clk\_name\_jit) \* 1fs; 
+
+      $display("l:%f",\_\_clk\_name\_l\_period\_phase); 
+
+      #\_\_clk\_name\_l\_period\_phase; 
+
+    end 
+
+  end
+
+endmodule
+
+`define CREATE\_CLK\_SIMPLE(clk\_name, period) \
+
+  bit clk\_name; \
+
+  initial begin \
+
+    clk\_name = 1'b0; \
+
+    forever begin \
+
+      #((period)/2.0); \
+
+      clk\_name = ~clk\_name; \
+
+    end \
+
+  end
+
+`endif
+
+使用案例：
+
+`timescale 1ns / 1ps
+
+module heart\_tb();
+
+reg clk;
+
+reg reset\_n;
+
+reg clk\_ref;
+
+reg clk\_test;
+
+reg clk\_ddr;
+
+reg clk\_uart;
+
+reg clk\_slow;
+
+reg clk\_sys;
+
+// 10ns周期，1000ppm频率抖动，启动时1~10ns随机相位偏移
+
+`CREATE\_CLK(clk\_sys, 1.0, 0.0, 50.0, 10000)
+
+`CREATE\_CLK(clk\_test, 1.0, 0.0, 50.0, 1000)
+
+`CREATE\_CLK(clk\_ref, 1.0, 0.0, 50.0, 100)
+
+endmodule
+
+---
+
+# 25. [验证平台]时钟产生器
+
+> 来源：https://mp.weixin.qq.com/s/wyYaONu-688-_obyE4JYCg
+> update 2026/08/29 13 : 30
+
+// ============================================================
+
+// clk\_gen\_macro.sv — 验证用时钟生成宏
+
+// 一行宏调用，无需使用者写 initial/fork/join 等样板代码
+
+// ============================================================
+
+// 用法（在验证平台顶层直接调用）：
+
+//
+
+//   `CREATE\_CLK(clk\_sys, 100.0)              // 100MHz, 50% duty, 无频偏/相移
+
+//   `CREATE\_CLK(clk\_ddr, 400.0, 0.5, 0.0, 0.0)  // 400MHz, 默认参数
+
+//   `CREATE\_CLK(clk\_usb, 48.0, 0.5, 1.5, 0.02)  // 48MHz, 1.5ns相移, 2%抖动
+
+//   `CREATE\_CLK(clk\_eth, 125.0, 0.55, 0.0, 0.005, 42)  // 带自定义种子
+
+//
+
+// 宏会自动声明 clock 变量（logic），自动创建 initial + fork 进程。
+
+// 使用者只需在模块/endmodule 之间写一行宏调用即可。
+
+// ============================================================
+
+// ------------------------------------------------------------------
+
+// `CREATE\_CLK(CLK\_NAME, FREQ\_MHZ, DUTY=0.5, PHASE\_NS=0.0, JITTER\_PCT=0.0, SEED=1)
+
+//
+
+// 参数:
+
+//   CLK\_NAME   - 时钟信号名（自动声明为 logic）
+
+//   FREQ\_MHZ   - 频率 (MHz, real)
+
+//   DUTY       - 占空比 0.0~1.0 (默认 0.5 = 50%)
+
+//   PHASE\_NS   - 相位偏移 (ns, 默认 0.0)
+
+//   JITTER\_PCT - 频偏/周期抖动百分比 RMS (0.0~1.0, 默认 0.0)
+
+//   SEED       - 随机种子 (int, 默认 1)
+
+// ------------------------------------------------------------------
+
+`define CREATE\_CLK(CLK\_NAME, FREQ\_MHZ, DUTY=0.5, PHASE\_NS=0.0, JITTER\_PCT=0.0, SEED=1) \
+
+    logic CLK\_NAME;                                                                       \
+
+    initial begin                                                                         \
+
+        automatic real    \_\_f\_``CLK\_NAME = FREQ\_MHZ;                                     \
+
+        automatic time    \_\_t\_``CLK\_NAME;                                                   \
+
+        automatic real    \_\_d\_``CLK\_NAME = DUTY;                                          \
+
+        automatic time    \_\_p\_``CLK\_NAME = PHASE\_NS \* 1ns;                                \
+
+        automatic real    \_\_j\_``CLK\_NAME = JITTER\_PCT;                                    \
+
+        automatic int     \_\_s\_``CLK\_NAME = SEED;                                          \
+
+        CLK\_NAME = 1'b0;                                                                   \
+
+        if (\_\_f\_``CLK\_NAME <= 0) begin                                                     \
+
+            $fatal(1, "[CREATE\_CLK] %m: FREQ\_MHZ must be > 0 (got %0f)", \_\_f\_``CLK\_NAME); \
+
+        end                                                                               \
+
+        \_\_t\_``CLK\_NAME = (1\_000\_000.0 / \_\_f\_``CLK\_NAME) \* 1ps;                            \
+
+        #(\_\_p\_``CLK\_NAME);                                                                \
+
+        fork                                                                              \
+
+            forever begin                                                                 \
+
+                automatic time \_\_half\_h = \_\_t\_``CLK\_NAME \* \_\_d\_``CLK\_NAME;                \
+
+                automatic time \_\_half\_l = \_\_t\_``CLK\_NAME \* (1.0 - \_\_d\_``CLK\_NAME);        \
+
+                automatic time \_\_jit\_h  = \_\_j\_``CLK\_NAME > 0                              \
+
+                    ? $dist\_normal(\_\_s\_``CLK\_NAME, 0, \_\_t\_``CLK\_NAME \* \_\_j\_``CLK\_NAME)    \
+
+                    : 0;                                                                  \
+
+                automatic time \_\_jit\_l  = \_\_j\_``CLK\_NAME > 0                              \
+
+                    ? $dist\_normal(\_\_s\_``CLK\_NAME, 0, \_\_t\_``CLK\_NAME \* \_\_j\_``CLK\_NAME)    \
+
+                    : 0;                                                                  \
+
+                CLK\_NAME = 1'b1;                                                           \
+
+                #(\_\_half\_h + \_\_jit\_h);                                                    \
+
+                CLK\_NAME = 1'b0;                                                           \
+
+                #(\_\_half\_l + \_\_jit\_l);                                                    \
+
+            end                                                                           \
+
+        join\_none                                                                          \
+
+    end
+
+// ============================================================
+
+// 快速参考卡 — 常见频点一行宏
+
+// ============================================================
+
+//
+
+// `CREATE\_CLK(clk\_sys,   100.0)                      // 100 MHz
+
+// `CREATE\_CLK(clk\_bus,   50.0)                       // 50  MHz
+
+// `CREATE\_CLK(clk\_ddr,   400.0)                      // 400 MHz
+
+// `CREATE\_CLK(clk\_serdes, 312.5)                     // 312.5 MHz
+
+// `CREATE\_CLK(clk\_usb,   48.0,  0.5, 0.0, 0.0)      // 48 MHz
+
+// `CREATE\_CLK(clk\_eth,   125.0, 0.5, 0.0, 0.005)    // 125 MHz + 0.5% jitter
+
+// `CREATE\_CLK(clk\_vco,   2000.0, 0.5, 0.0, 0.0, 42) // 2 GHz, 自定义种子
+
+//
+
+// 以上每行都是完整有效的调用。只需放在 module ... endmodule 之间即可。
+
+---
+
+# 26. 什么是BootROM？为什么芯片启动离不开它
+
+> 来源：https://mp.weixin.qq.com/s/Xf0FnVGK_phjYzx8Mtu-9w
+> 作者：芯片验证
+> update 2026/08/29 13 : 34
+
+一颗芯片刚上电时，系统还处在非常早期的状态。DDR通常还没有完成初始化，操作系统也还没有启动。即使启动镜像位于外部Flash、eMMC等介质中，芯片也需要先具备访问这些介质的基本硬件条件，并确定从哪里、以什么方式加载后续软件。这时需要有一段最早执行的代码，把芯片从“刚复位”的状态带到“可以继续启动”的状态。这段代码，通常就是BootROM。
+
+严格来说，并不是所有芯片都必须使用BootROM；但对于包含CPU或管理处理器的复杂SoC，BootROM是一种非常常见的早期启动机制。
+
+BootROM通常是处理器复位后最早执行的软件之一。它的任务不是完成整个系统启动，而是把芯片带到可以加载下一阶段软件的状态。DMXAI芯片验证
+
+## 26.1 芯片上电后，谁来执行第一段代码
+
+芯片启动不是从Linux、RTOS或应用程序开始的。在系统真正运行起来之前，处理器需要先知道从哪里取第一条指令，也需要判断启动模式是什么、下一阶段软件在哪里、当前硬件环境是否满足继续启动的条件。
+
+这些事情不能等操作系统来做，因为操作系统本身还没有被加载；也不能完全交给外部软件，因为外部存储、总线接口和安全状态都可能还没有准备好。所以芯片内部通常会提供一段固化的启动代码。复位释放后，处理器会从芯片定义的复位入口开始取第一条指令，通常这个入口会指向BootROM所在地址或对应的启动逻辑。
+
+BootROM通常是软件启动链路中非常靠前的一环，但在它执行之前，芯片内部的电源、复位、时钟以及部分硬件启动逻辑已经开始工作。一个简化后的启动链路，可以理解为：
+
+![](SoC验证_AI_assets/image-0052.png)
+
+## 26.2 BootROM是什么
+
+BootROM通常指固化在芯片内部ROM中的早期启动代码。严格来说，ROM是存储这些代码的硬件；工程讨论中常说的BootROM，通常指固化在片内ROM中的启动程序，以及围绕它形成的早期启动阶段。
+
+从软件角度看，它是一段启动代码；从芯片架构角度看，它是连接硬件初始状态和软件运行环境之间的桥梁。
+
+它和普通固件不同。普通固件可以放在Flash、eMMC或其他外部存储里，后续还能通过软件方式更新；BootROM则通常在芯片制造时就已经固化，回片后很难再修改。
+
+这也是BootROM特殊的地方。它的位置非常早，权限通常很高，和芯片架构、启动模式、安全策略、存储接口、调试入口都有直接关系。它不一定代码量很大，但它必须足够可靠，因为后面所有启动阶段都依赖它先跑起来。
+
+可以把BootROM理解成芯片启动链路的第一环。它不负责把整个系统完整拉起来，但要完成一个关键任务：让系统具备加载下一阶段Bootloader或固件的条件。
+
+## 26.3 BootROM通常负责哪些事情
+
+不同芯片的BootROM实现会有差异，但核心任务通常比较相似。
+
+首先，它会判断启动模式。启动模式可能来自strap pin、eFuse、OTP、配置寄存器或其他硬件状态，用来决定芯片从SPI Flash、eMMC、SD、USB、UART或其他启动介质启动。
+
+其次，它会准备最小硬件环境。比如配置必要的时钟、复位和访问权限，准备可用的片上SRAM，并初始化读取启动介质所需要的最小硬件环境。
+
+第三，它会加载下一阶段软件。这个软件可能是Bootloader，也可能是安全固件、一级启动程序或厂商自定义的初始化代码。
+
+第四，它可能承担安全启动相关工作。比如检查镜像头、校验签名、处理加密镜像、读取安全配置，或者根据安全策略决定是否允许继续启动。
+
+最后，它还可能处理失败回退、下载或恢复路径。例如主启动介质失败后尝试备用启动源，或者在特定条件下进入UART、USB等下载模式。对于带安全机制的SoC，BootROM还可能参与调试权限的配置或认证；而JTAG等硬件调试链路本身通常由独立的调试基础设施实现。
+
+BootROM不一定做很多事，但它做的每件事都处在启动链路最前面。一旦这里出错，后面的软件可能根本没有机会运行。
+
+## 26.4 BootROM和Bootloader有什么区别
+
+BootROM和Bootloader经常被放在一起讨论，但它们不是一回事。BootROM通常是芯片内部固化的第一阶段启动代码，复位后最先执行，通常不可随意更新。
+
+Bootloader通常是由BootROM从外部存储或其他启动介质加载的下一阶段软件。它可以承担更复杂的初始化任务，比如DDR初始化、镜像加载、设备树处理、外设配置，最终进入RTOS、Linux或其他运行环境。
+
+DMXAI芯片验证BootROM通常固化在芯片内部，负责最早期启动；Bootloader通常从外部存储加载，负责更复杂的初始化和系统加载。BootROM负责把系统带到“能加载下一阶段”的状态；Bootloader负责把系统继续带到“能运行完整软件”的状态。
+
+实际芯片的启动链可能包含多个Bootloader、安全固件或厂商自定义初始化阶段，这里只是概念上的简化。
+
+很多启动问题看起来像Bootloader没有跑起来，但真正原因可能发生在更早的BootROM阶段，比如启动介质选择错误、镜像格式解析失败、权限配置不对，或者片上SRAM不可用。
+
+## 26.5 为什么BootROM一旦出错很难补救
+
+BootROM的问题通常比普通软件问题更难处理，原因很直接：它太早，也太难更新。有些芯片会设计BootROM patch、eFuse配置或备用启动路径来规避部分问题，但这些能力通常有限，不能把BootROM当成普通软件一样随意更新。
+
+如果BootROM里的启动模式判断错了，芯片可能从错误介质启动；如果镜像地址或格式解析错了，下一阶段软件可能加载失败；如果安全校验流程有问题，合法镜像可能无法通过，或者非法镜像被错误接受；如果调试入口处理不当，回片后问题定位会变得非常困难。
+
+对Bring-up团队来说，BootROM问题尤其棘手。因为这个阶段很多调试条件还没有建立。DDR可能还不能用，复杂日志系统还没起来，驱动和操作系统都没有参与。团队可能只能依赖JTAG、UART、状态寄存器、启动进度码、电流变化或板级信号，一步步判断芯片到底运行到了哪里。
+
+一个常见现象：芯片上电有电流、有时钟，但UART没有任何输出。此时问题未必在Linux或驱动，可能是BootROM甚至更早的启动阶段没有进入预期路径。
+
+BootROM这“很早的一小段代码”不简单。它决定了芯片能不能进入后续可调试、可加载、可验证的状态。
+
+## 26.6 为什么BootROM也需要专门验证？
+
+BootROM验证不能只看“能不能跳到Bootloader”。它既包括软件逻辑，也包括BootROM和硬件启动配置、存储接口、安全状态、调试入口之间的交互。
+
+真正需要关注的是：各种启动模式是否都被覆盖，镜像格式是否解析正确，异常路径是否可控，安全校验失败时是否有合理处理，如果架构定义了备用启动路径，主启动介质失败后能否按照预期进入fallback或recovery流程，eFuse或OTP配置组合是否符合预期，reset场景下状态是否一致。
+
+BootROM验证不仅要覆盖正常启动路径，也要覆盖失败路径。比如镜像不存在、签名失败、介质读失败、配置冲突、非法启动模式、恢复入口条件不满足，都应该有明确处理方式。这些问题如果等回片后才第一次面对，定位成本会非常高。在Tapeout前，如果能在RTL仿真、Emulation或FPGA Prototype上提前跑通BootROM、Bootloader和基础启动链路，就可以提前暴露大量软件可见的系统问题。
+
+对复杂SoC来说，提前建立可运行的FPGA Prototype环境，不只是验证功能，也是在提前验证启动链路、软件协同和调试路径。
+
+这类验证不能替代真实硅片上的Bring-up，但可以减少回片后同时存在的未知数。至少团队可以提前确认：启动路径是否清楚，日志和进度码是否可用，失败模式是否可复现，软件镜像和硬件配置是否描述了同一个系统。
+
+RTL仿真、Emulation和FPGA Prototype并不能等价复现真实硅片上的电源时序、模拟/PHY行为、真实OTP/eFuse状态以及部分安全和物理实现因素。它们能够降低Bring-up风险，但不能替代硅后验证。
+
+对复杂SoC和AI芯片来说，它们完整的启动链往往还会涉及安全固件、多个处理器或管理核、DDR/HBM等内存系统、电源域管理以及后续driver/runtime初始化。BootROM虽然只负责最早的一段，但它决定了后续这些阶段能否获得一个可靠的启动基础。
+
+## 26.7 总结DMXAI芯片验证
+
+BootROM是复杂SoC启动链路中常见的早期软件阶段，连接复位入口、启动模式、最小硬件初始化、镜像加载、安全检查、恢复路径以及部分安全访问控制逻辑。
+
+沟通交流微信:xor404，请备注单位和职务
+
+![](SoC验证_AI_assets/image-0053.png)
+
+---
+
+# 27. 从精确控制到放手：SOC验证工程师的第一课
+
+> 来源：https://mp.weixin.qq.com/s/hdP6VHrvRsOiQHjJ_q1f6w
+> 作者：make ic
+> update 2026/08/29 13 : 35
+
+你在IP验证平台上调了三天的bug，终于把那个corner case抓住了。sequence里精确到第47个时钟周期拉高valid信号，第52个周期插入back pressure。波形完美重现，问题定位，修复验证，收工。
+
+第二年你坐进SOC项目组。tech lead说，现在写个C程序让CPU去读那个寄存器。
+
+**你突然意识到：你不再拥有时钟周期级别的控制权了。**
+
+这是IP验证和SOC验证最本质的区别，也是大多数验证工程师转型时第一个卡住的地方。
+
+![](SoC验证_AI_assets/image-0054.png)
+
+---
+
+## 27.1 激励源的代际更替
+
+IP验证的激励链条很短：你写UVM sequence → 驱动virtual interface → transaction在总线上 → DUT响应。整条路径透明可控，你就是那个orchestrator。
+
+SOC验证的激励链条长得多：你写C程序 → 编译成指令 → CPU取指执行 → 发起总线transaction → 穿过interconnect → 最终到达目标IP。中间隔了编译器、CPU流水线、cache、总线仲裁、地址译码。
+
+**问题来了：当transaction没按预期出现在总线上，是软件逻辑写错了，还是编译器优化了你的代码，还是cache命中导致没有总线访问，还是总线仲裁延迟了？**
+
+你失去了直接控制激励的能力，但获得了更接近真实使用场景的测试环境。
+
+这是一个trade-off，不是技术倒退。
+
+---
+
+## 27.2 Chiplet时代的验证困境
+
+2025年UCIe 3.0发布，带宽翻倍到48 GT/s。多die封装成为主流，CPU die、AI加速die、IO die通过chiplet互联拼成一个SOC。
+
+这让SOC验证更复杂了：
+
+- 激励可能来自不同die上的多个CPU
+- 跨die的延迟和时序不确定性增加
+- 你需要协调多个软件栈同时跑
+
+有个项目组尝试用纯软件测试chiplet间的coherency协议，测试代码写了2000行，跑了一周才触发一次bug。最后发现是多核之间的memory barrier没加对。
+
+**在IP验证阶段，这个问题10行SystemVerilog就能稳定重现。**
+
+---
+
+## 27.3 你需要重建思维模型
+
+从IP到SOC，验证工程师的技能栈发生了结构性变化：
+
+**UVM/SystemVerilog的比重下降** → 你需要更多时间写C/汇编，理解编译器行为，调试软件栈
+
+**Debugging方式变了** → 不能只看波形了，得学会用CPU trace、profiler、性能计数器
+
+**Coverage策略变了** → 功能覆盖率需要mapping到软件行为，而不是纯硬件状态机
+
+有验证工程师抱怨：”我是来做硬件验证的，不是来写驱动的。”这个抱怨有道理，但没意义。SOC验证的本质就是软硬件协同验证，你逃不掉。
+
+---
+
+## 27.4 控制的幻觉与真实的价值
+
+IP验证让你感觉掌控一切，但那只是在验证环境里的掌控。SOC验证逼着你面对真实世界的复杂性：软件会写错，编译器会优化，CPU会乱序执行，cache会影响时序。
+
+**真正有价值的bug，往往藏在这些你放弃精确控制之后的地方。**
+
+一个DMA控制器在IP验证阶段跑了100万条random测试都没问题，到SOC验证时Linux启动过程中必现死锁。原因是驱动程序的中断处理和DMA描述符更新之间有race condition，这个场景在纯UVM环境里很难构造出来。
+
+所以SOC验证不是IP验证的简化版，而是另一个维度的战场。你需要放弃一部分控制精度，换取覆盖真实使用场景的能力。
+
+---
+
+从IP到SOC，最难的不是学新工具或新语言，而是接受”我不再能精确控制每个时钟周期”这个事实。
+
+但这也意味着你的工作更接近芯片的最终价值：**能跑软件的硬件才是真正的SOC。**
+
+验证工程师的价值不在于你能控制多精确，而在于你能发现多少真实世界会遇到的问题。
+
+---
+
+# 28. 什么是Assertion？把芯片设计规则变成自动检查
+
+> 来源：https://mp.weixin.qq.com/s/OznDZ-hQWs0v1dCGnAxnHA
+> 作者：芯片验证
+> update 2026/08/29 13 : 35
+
+仿真跑完了，log里没有明显报错，波形也大致正常，是不是就说明设计正确？在芯片验证里，答案通常没有这么简单。
+
+复杂RTL设计中，很多错误不会一直停在那里等人发现。它可能只持续几个cycle，可能只出现在某个状态切换瞬间，也可能只有在reset、backpressure、overflow、异常响应这类边界场景下才暴露。如果完全依赖看波形，很容易漏掉问题。Assertion就是为了解决这类问题。
+
+DMXAI芯片验证在仿真验证中，Assertion不是testcase。Testcase负责制造场景，Assertion负责检查设计在这些场景下有没有违反规则。
+
+## 28.1 为什么光靠看波形不够
+
+看波形是芯片验证里非常重要的调试手段，但它不适合作为主要的规则检查方式。原因是：波形信息太多，而设计规则往往很具体。比如，某些valid/ready协议规定，在握手完成前，valid和相关payload必须满足特定的保持规则。FIFO通常要求empty时不应发生协议未允许的有效读出或underflow，full时不能继续写入新数据，除非设计协议明确允许同周期读写等特殊行为。再比如，req发出后，ack必须在规定周期内回来。
+
+这些规则如果靠人每次打开波形去看，不仅效率低，也很难在大规模regression里持续执行。更现实的问题是，很多bug发生得很早，但系统最终错误可能很晚才出现。等输出结果错了再回头追，调试路径会很长。Assertion的作用，就是把这些关键规则提前写下来，让仿真在运行过程中自动检查。
+
+## 28.2 Assertion是什么
+
+Assertion可以理解成一种“可执行的设计规则”。更准确地说，设计规则通常会被描述成一个property，也就是在特定前提和时间关系下，设计应该满足什么行为；Assertion则要求工具对这个property进行检查。
+
+在SystemVerilog中，这类规则通常通过SVA来描述。SVA本质上是在用语言描述这些时序property。例如：
+
+- FIFO为空时不应发生协议未允许的有效读出或underflow；
+- 状态机不能进入非法状态；
+- request发出后必须在限定周期内得到response；
+- reset释放后，架构规定需要初始化的关键状态，必须在规定时序内进入预期状态；
+- valid保持期间，data不能违反协议规定的稳定性要求。
+
+这些规则不一定负责制造输入场景。它们更像是放在设计旁边的检查器，持续观察DUT有没有做出不该做的行为。所以Assertion不是替代testcase，也不是替代Testbench。它解决的是另一个问题：当某个场景发生时，设计是否遵守了应该遵守的规则。
+
+## 28.3 Assertion通常检查哪些规则
+
+Assertion最常见的使用有几类。
+
+第一类是协议规则。比如valid/ready、req/ack、AXI、APB这类总线接口，都有明确的握手、时序和稳定性要求。这类规则非常适合写成Assertion，因为一旦接口协议被破坏，后面看到的系统错误往往已经离根因很远。
+
+第二类是时序关系。比如某个事件发生后，另一个事件必须在N个cycle内发生；某个enable拉高后，状态必须按规定顺序推进。这类规则靠波形检查很容易漏，用Assertion可以自动捕捉。
+
+第三类是状态机和资源边界。非法状态、非法跳转、FIFO overflow/underflow、counter越界、buffer满空条件错误，都是Assertion常见的检查对象。
+
+第四类是跨模块接口契约。很多SoC集成问题不是单个模块写错，而是上下游对接口、时钟、reset、配置顺序的理解不一致。把这些隐含假设变成显式property，是Assertion在SoC集成阶段非常重要的价值。
+
+还有一些局部数据一致性也适合用Assertion检查。例如请求携带的ID、tag或attribute，在经过流水线、buffer或仲裁后，仍需要满足特定对应关系。
+
+## 28.4 Assertion和Testbench是什么关系
+
+如果把Testbench看成给DUT搭建验证环境的系统，那么Assertion就是放在关键位置上的规则检查器。
+
+Testbench负责给DUT提供clock、reset、transaction、配置流程、数据包和异常场景，让DUT跑起来。Assertion则负责在DUT运行过程中检查关键规则有没有被破坏。
+
+testcase解决“场景有没有发生”，Assertion解决“场景发生以后，设计有没有违反规则”。上面的区分主要针对simulation环境；在Formal中，场景的产生方式不同，但Assertion仍然用于表达和检查设计性质。
+
+Assertion尤其适合检查局部时序关系、协议规则、不变量和控制行为，但不是所有功能正确性都适合写成Assertion。对于复杂数据计算、transaction级结果比较和端到端数据正确性，通常还需要scoreboard或reference model。Assertion、checker和scoreboard解决的是不同层次的问题。
+
+## 28.5 Assertion为什么也能用于Formal Verification
+
+在Simulation里，Assertion只能检查已经被激励到的场景。也就是说，如果testcase没有跑到某个状态，相关Assertion就没有机会触发。
+
+在Formal Verification里，Assertion还可以承担另一种角色：作为需要证明的性质。在Formal Verification中，工具不是等待testcase产生某一条具体轨迹，而是在给定模型和约束条件下探索可能的输入和可达状态，并尝试证明这个property在约束范围内是否始终成立。如果证明不了，工具可能给出一个反例，告诉工程师在什么条件下规则会被打破。
+
+在仿真中，Assertion只能检查已经被激励到的场景；在Formal Verification中，工具会在给定约束下尝试证明property是否成立，但证明成功、证明失败和证明尚未收敛，是不同结果。DMXAI芯片验证
+
+在Formal环境中，还经常会区分不同property的角色：assert描述DUT必须满足的性质，assume描述环境或输入需要满足的约束，cover用于寻找某个目标场景是否能够发生。这也是Assertion很有价值的地方。它既可以在Simulation中帮助自动报错，也可以在Formal Verification中用于分析和证明协议不变量、FIFO边界、非法状态不可达、仲裁规则等关键性质。当然，Formal也不是万能的。复杂SoC状态空间很大，仍然需要合理抽象、约束和工程取舍。
+
+## 28.6 Assertion没有报错，就说明验证到了吗？
+
+答案是不一定。这是使用Assertion时很容易忽略的问题。Assertion没有失败，可能是规则确实一直成立，也可能是触发条件根本没有发生。比如有一条规则：request发出后，3个cycle内必须收到ack。如果整个regression里request从来没有发生，这条Assertion当然不会报错，但这并不说明request/ack路径已经被有效验证。
+
+对于这类带触发前提的implication property，如果前提条件始终没有发生，property可能以Vacuous Pass的方式成立，也就是所谓vacuity。表面上没有失败，但真正需要验证的后续关系可能从未被检查。
+
+所以，判断Assertion有没有价值，不能只看有没有failure。还要关注触发条件是否真正发生、property是否得到有效评估，以及工具提供的assertion coverage、cover property和functional coverage等证据。这也是为什么好的验证环境不只关心“有没有报错”，还要关心“检查是否真的发生过”。
+
+## 28.7 什么样的Assertion才真正有价值
+
+Assertion不是越多越好，也不是把所有“不应该发生”的情况都写一遍就有价值。好的Assertion至少要满足几个条件。
+
+第一，规则要明确。它最好能对应Spec、interface contract或architecture requirement，而不是一句模糊的“系统不应该出错”。
+
+第二，离根因要近。Bug刚发生时就报错，比系统几千个cycle以后输出错误再追根因更有价值。
+
+第三，失败要容易解释。一条property最好对应一个清楚的设计意图。报错后，工程师能快速知道是哪条规则被破坏。
+
+第四，要能判断是否真正被激活。否则Assertion永远是绿色的，但触发条件从未出现，验证证据就很弱。
+
+比如接口边界、状态机关键跳转、FIFO和queue边界、跨模块接口契约、reset和低功耗切换路径、容易被软件配置影响的控制路径，都是值得优先考虑的位置。真正有用的Assertion，应该离问题足够近，让bug在刚刚发生时就被抓住。
+
+## 28.8 总结
+
+Assertion把芯片设计中的关键规则变成可以被工具检查的property。和Testbench、testcase或scoreboard一起，让协议、状态机、资源边界和跨模块接口契约的问题更早暴露；好的Assertion不只是“没有报错”，还要确认规则被真正激活、结果可解释。Assertion真正提高的，不只是检查效率，而是把原本存在工程师脑子里的设计意图，变成能够在每一次Regression中持续执行的验证规则。沟通交流加微信:xor404，请备注单位和职务。
+
+---
+
+# 29. SoC级SRAM/ROM验证方法
+
+> 来源：https://mp.weixin.qq.com/s/GE9gO9ghg5Rs5n1oE2Yl8g
+> 作者：芯想事珹
+> update 2026/08/29 13 : 41
+
+![](SoC验证_AI_assets/image-0056.gif)
+
+
+
+在SoC验证中，SRAM和ROM通常是最基础的片上存储模块。从模块级角度看，SRAM/ROM的功能似乎很简单：给定地址，完成读写或返回固定数据。但在SoC级环境中，memory验证并不只是验证一个数组是否能读写，而是要验证完整访问链路是否正确。
+
+典型访问路径可以概括为：CPU / JTAG / DMA / Bus Master → 系统总线 → 地址译码 → 总线桥接 → Memory Slave → SRAM / ROM Model。
+
+因此，SoC级memory验证的核心目标是：
+不仅要确认存储数据正确，还要确认访问路径、地址映射、总线协议、响应时序和数据宽度处理都符合设计预期。
+
+**01**
+
+**SRAM/ROM验证的核心概念**
+
+**Memory地址空间**
+
+每个SRAM或ROM在SoC中都会有固定的地址范围，例如：
+
+ROM  : 0x0000\_0000 ~ 0x0000\_7FFF
+
+SRAM : 0x2000\_0000 ~ 0x2003\_FFFF
+
+验证时首先要确认：
+
+1. base地址是否正确
+
+2. top地址是否正确
+
+3. size是否和设计文档一致
+
+4. 地址译码是否覆盖完整范围
+
+5. 是否存在地址alias
+
+如果一个memory容量为32KB，数据宽度为32bit，则word数量为：
+
+32KB / 4 = 8192 words = 2^13
+
+对应memory model中的地址宽度通常应为：
+
+ADDRWIDTH = 13
+
+如果地址宽度配置过小，就会出现高地址和低地址访问到同一物理存储单元的问题。
+
+**CPU访问路径**
+
+CPU访问memory时，验证的是处理器真实执行路径：
+
+CPU Core → I-Code/D-Code/System Bus → AHB/AXI Bus → Memory
+
+这种方式适合验证：
+
+1. CPU是否能正常取指
+
+2. CPU是否能读写SRAM
+
+3. ROM vector table是否可访问
+
+4. 总线地址译码是否正确
+
+5. byte/halfword/word访问是否正确
+
+常见的软件访问宏如下：
+
+```
+typedefunsignedint u32;
+typedefunsignedshort u16;typedefunsignedchar u8;
+#define reg_write32(addr, val)  (*(volatile u32 *)(addr) = (u32)(val))#define reg_read32(addr)        (*(volatile u32 *)(addr))
+#define reg_write16(addr, val)  (*(volatile u16 *)(addr) = (u16)(val))#define reg_read16(addr)        (*(volatile u16 *)(addr))
+#define reg_write8(addr, val)   (*(volatile u8 *)(addr) = (u8)(val))#define reg_read8(addr)         (*(volatile u8 *)(addr))
+```
+
+**JTAG访问路径**
+
+JTAG访问memory时，验证的是debug访问链路：
+
+JTAG TAP → Debug Module / DAP → Bus Master → System Bus → Memory
+
+JTAG验证适合确认：
+
+1. JTAG TAP是否正常
+
+2. Debug访问路径是否打通
+
+3. JTAG master是否能访问目标地址空间
+
+4. ROM/SRAM是否能通过debug路径读写
+
+5. 总线response是否正确返回
+
+需要注意的是，JTAG能读到IDCODE，只能说明JTAG TAP链路正常；
+并不代表JTAG一定能访问系统地址空间。
+
+因此，一般需要先读一个已知系统寄存器，例如CPU ID寄存器，确认debug访问路径可用。
+
+**02**
+
+**SRAM验证方法**
+
+SRAM是可读写存储器，因此验证重点包括数据通路、地址通路和字节写使能。
+
+**word读写测试**
+
+最基本的SRAM测试是32bit word写读：
+
+```
+reg_write32(addr, 0x11223344);
+data = reg_read32(addr);if (data != 0x11223344) {    fail();}
+```
+
+常用pattern例如：
+
+```
+0x00000000
+0xFFFFFFFF0x555555550xAAAAAAAA0x123456780x87654321
+```
+
+该测试可以发现：
+
+1. 数据线stuck-at
+
+2. 读写通路错误
+
+3. 总线返回数据错误
+
+4. 地址译码未命中
+
+**byte lane测试**
+
+对于32bit SRAM，通常有4个byte lane：
+
+```
+byte0 → data[7:0]
+byte1 → data[15:8]byte2 → data[23:16]byte3 → data[31:24]
+```
+
+byte写测试可以验证写使能是否正确。
+
+示例：
+
+```
+reg_write32(addr, 0xA5A5A5A5);
+reg_write8(addr + 0, 0x11);// expected: 0xA5A5A511reg_write8(addr + 1, 0x22);// expected: 0xA5A52211reg_write8(addr + 2, 0x33);// expected: 0xA5332211reg_write8(addr + 3, 0x44);// expected: 0x44332211
+```
+
+如果结果不符合预期，通常需要检查：
+
+1. byte enable信号是否正确
+
+2. 总线WSTRB/HWRITE/HSIZE是否正确
+
+3. endian处理是否正确
+
+4. SRAM wrapper是否正确拼接byte lane
+
+**halfword测试**
+
+halfword测试用于验证16bit访问：
+
+```
+reg_write32(addr, 0xA5A5A5A5);
+reg_write16(addr + 0, 0x1122);// expected: 0xA5A51122reg_write16(addr + 2, 0x3344);// expected: 0x33441122
+```
+
+该测试可以覆盖：
+
+1. 16bit访问对齐
+
+2. HSIZE或WSTRB处理
+
+3. 低半字和高半字写入路径
+
+**walking data测试**
+
+walking data用于检查单bit数据线问题：
+
+```
+for (i = 0; i < 32; i++) {
+    data = 1 << i;    reg_write32(addr, data);    check(addr, data);    data = ~data;    reg_write32(addr, data);    check(addr, data);}
+```
+
+该测试可以发现：
+
+1. 数据线短路
+
+2. 数据线断路
+
+3. 单bit stuck-at 0/1
+
+4. bit翻转错误
+
+**地址alias测试**
+
+地址alias测试是SRAM验证中非常重要的一项。
+
+方法是在不同地址写入不同pattern，然后逐个读回：
+
+```
+reg_write32(base + 0x0000, pattern0);
+reg_write32(base + 0x1000, pattern1);reg_write32(base + 0x2000, pattern2);reg_write32(base + 0x4000, pattern3);check(base + 0x0000, pattern0);check(base + 0x1000, pattern1);check(base + 0x2000, pattern2);check(base + 0x4000, pattern3);
+```
+
+如果某两个地址读回相同或互相覆盖，说明可能存在：
+
+1. ADDRWIDTH配置过小
+
+2. 地址线未连接
+
+3. 地址译码范围错误
+
+4. 高地址bit被截断
+
+**sweep测试**
+
+sweep测试会遍历SRAM某个地址范围，对每个word写入地址相关pattern，再全部读回检查。
+
+```
+for (addr = start; addr <= end; addr += 4) {
+    data = pattern(addr);    reg_write32(addr, data);}for (addr = start; addr <= end; addr += 4) {    data = pattern(addr);    check(addr, data);}pattern最好和地址相关，例如：static u32 pattern(u32 addr){    u32 data;    data = addr ^ 0xA5A55A5A;    data = data + ((addr << 7) | (addr >> 25));    data = data ^ 0x3C3CC3C3;    return data;}
+```
+
+这种方式比固定pattern更容易发现地址alias问题。
+
+**03**
+
+**SRAM验证中的常见风险**
+
+**sweep覆盖自身栈区**
+
+如果测试程序本身运行在被测SRAM中，那么全空间sweep可能会覆盖：
+
+1. stack
+
+2. heap
+
+3. .data
+
+4. .bss
+
+5. printf使用的runtime区域
+
+典型现象是失败地址靠近SRAM顶部，例如：
+
+ADDR = SRAM\_TOP附近
+
+EXP  = pattern值
+
+GOT  = 函数调用或printf写入的数据
+
+这种情况并不一定是SRAM设计错误，而是测试程序破坏了自身运行环境。
+
+解决方法是划定安全测试区域：
+
+```
+#define SRAM_TEST_START  0x20001000
+#define SRAM_TEST_END    0x2003BFFC
+```
+
+保留顶部空间给stack使用。
+
+**printf影响测试结果**
+
+printf()通常会使用较多stack，也可能访问UART、semihosting或调试接口。
+在memory sweep期间，频繁调用printf()可能引入额外干扰。
+
+更稳妥的方式是：
+
+1. 测试开始时打印一次
+
+2. 测试过程中只在失败时打印
+
+3. sweep循环中避免大量printf
+
+4. fail时记录addr/exp/got
+
+**测试范围必须word对齐**
+
+对于32bit读写，地址应保持4字节对齐：
+
+```
+addr[1:0] == 2'b00
+```
+
+否则可能触发：
+
+1. unaligned access fault
+
+2. 总线拆分访问
+
+3. wrapper不支持非对齐访问
+
+4. 与预期不一致的数据拼接
+
+**04**
+
+**ROM验证方法**
+
+ROM是只读存储器，验证重点不在写入，而在于：
+
+1. ROM初始化内容是否正确
+
+2. CPU/JTAG是否能读到ROM
+
+3. 地址范围是否正确
+
+4. 高地址是否存在alias
+
+5. endian是否正确
+
+ROM验证通常分为：
+
+1. 读取关键地址
+
+2. 读取vector table
+
+3. 抽样检查
+
+4. 全空间sweep compare
+
+**ROM vector table检查**
+
+对于Cortex-M类处理器，ROM起始地址通常存放vector table：
+
+```
+0x00000000 : Initial Stack Pointer
+0x00000004 : Reset Handler0x00000008 : NMI Handler0x0000000C : HardFault Handler
+```
+
+因此ROM验证可以先读取前几个word：
+
+```
+ROM[0x00000000]
+ROM[0x00000004]ROM[0x00000008]ROM[0x0000000C]
+```
+
+如果这些地址读不到，通常说明：
+
+1. ROM未初始化
+
+2. ROM地址译码错误
+
+3. CPU/JTAG访问路径不通
+
+4. ROM被remap到其他地址
+
+**ROM golden data**
+
+ROM读数据检查需要golden data。
+golden data应来自和DUT一致的初始化文件。
+
+常见初始化方式为bin二进制文件
+
+```
+fd = $fopen("image.bin", "rb");
+$fread(data, fd);
+```
+
+如果ROM model使用二进制加载，那么testbench最好也用同样方式生成golden。
+
+**端序处理**
+
+ROM初始化时经常会遇到端序问题。
+
+例如bin文件中四个byte为：
+
+```
+00000420
+```
+
+它在处理器视角下可能表示：
+
+```
+0x20040000
+```
+
+如果testbench没有做byte swap，就可能比较出错。
+
+常见swizzle函数如下：
+
+```
+function [31:0] swizzle;
+    input [31:0] data_in;begin    swizzle = {data_in[7:0],               data_in[15:8],               data_in[23:16],               data_in[31:24]};endendfunction
+```
+
+验证中应保证：
+
+ROM model使用什么方式加载
+
+golden就使用什么方式加载
+
+这样才能避免由于端序不一致造成的误判。
+
+**ROM抽样验证**
+
+在全空间sweep之前，推荐先做抽样检查；
+
+对于32bit word访问，最后几个地址应按4字节对齐，例如：
+
+```
+ROM_TOP_WORD = ROM_TOP - 3
+```
+
+如果ROM终址为：
+
+```
+0x00007FFF
+```
+
+最后一个word地址为：
+
+```
+0x00007FFC
+```
+
+**05**
+
+**Access Fail和Data Mismatch的区别**
+
+在memory验证中，必须区分两类错误：
+
+**Access Fail**
+
+表示访问事务本身失败。
+
+可能原因包括：
+
+1. JTAG bridge未enable
+
+2. 地址不可达
+
+3. 总线返回error
+
+4. default slave响应
+
+5. timeout
+
+6. clock/reset未释放
+
+7. 总线桥不支持该方向访问。
+
+**Data Mismatch**
+
+表示访问成功，但读回数据和期望不一致。
+
+可能原因包括：
+
+1. ROM初始化文件错误
+
+2. endian处理错误
+
+3. 地址alias
+
+4. byte lane错误
+
+5. memory内容被改写
+
+6. golden data生成错误
+
+这两类错误的定位方向完全不同，不能混在一起分析。
+
+**06**
+
+**波形检查方法**
+
+当JTAG或CPU访问memory失败时，建议从波形中逐层确认。
+
+**Master侧**
+
+如果是AHB master，查看：
+
+```
+HADDR
+HTRANSHWRITEHSIZEHREADYHRESPHRDATA
+```
+
+如果是AXI master，查看：
+
+```
+ARADDR
+ARVALIDARREADYRVALIDRREADYRDATARRESP
+```
+
+首先确认访问是否真正发出。
+
+**地址译码**
+
+查看目标slave的select信号：
+
+```
+rom_hsel
+sram_hsel
+```
+
+如果访问目标地址时，目标slave select没有拉高，说明问题在地址译码或总线路径。
+
+**Slave侧**
+
+对于AHB slave，查看：
+
+```
+HSEL
+HADDRHTRANSHREADYHREADYOUTHRESPHRDATA
+```
+
+正常读操作应满足：
+
+```
+HSEL      = 1
+HTRANS[1] = 1HWRITE    = 0HRESP     = OKAYHREADYOUT = 1后返回有效HRDATA
+```
+
+**07**
+
+**总结**
+
+SoC级SRAM/ROM验证并不是简单地读写memory数组，而是要验证一条完整的访问链路：
+
+Master是否发起访问？
+
+地址是否正确？
+
+总线是否接收？
+
+目标slave是否被选中？
+
+ready/response是否正确？
+
+读写数据是否符合预期？
+
+其中最重要的原则是先验证访问路径，再验证数据内容，先判断transaction状态，再判断read data，先做抽样检查，再做全空间sweep。
+
+优秀的SoC memory验证不是单纯比较数据，而是逐层确认访问链路，把问题准确归类为：路径问题、协议问题、地址问题、初始化问题、数据问题和测试方法问题，只有这样，memory验证结果才真正可信。
+
+**END**
+
+![](SoC验证_AI_assets/image-0060.jpg)
+
+---
+
+# 30. 一个中断，从外设到CPU，中间经过了什么？
+
+> 来源：https://mp.weixin.qq.com/s/EWQJPg6bPxCRC6bm2EUOAg
+> 作者：芯片验证
+> update 2026/09/15 21 : 45
+
+调UART时，我们可能会遇到这样的情况：接收FIFO里已经有数据，程序却一直没有进入中断处理函数。另一种情况是，程序能进入处理函数，却刚退出又进来，CPU反复处理同一个中断。
+
+前一种情况，我们要找请求停在了哪里；后一种情况，则要确认是什么让请求一直存在。两者需要沿着同一条链路看：外设产生事件，形成中断状态，经过使能和屏蔽，再由中断控制器通知CPU。CPU转入处理程序后，还要处理外设、完成控制器侧的操作，才能结束这次中断处理。
+
+外设有事件，不等于CPU已经收到中断；进入处理函数，也不等于这次中断已经处理完。外设的请求原因、控制器的处理状态和CPU的执行流程，需要分别确认。
+
+我们用一次UART接收贯穿这条链路：数据进入FIFO，达到设定条件后请求CPU处理。先假设UART的供电、时钟、复位和收发配置正常，接收FIFO已启用，中断通过一条电平型请求接到控制器。控制器和CPU入口以Arm GICv3与AArch64为例，其他架构的入口和完成方式可能不同。
+
+![](SoC验证_AI_assets/image-0061.png)
+
+## 30.1 外设有了数据，中断请求怎么产生？
+
+UART收到的数据先进入接收FIFO，也就是暂存数据的队列。CPU可以不断读状态，检查队列里有没有数据；启用接收中断后，则可以等硬件满足约定条件时再来处理，不必一直轮询。
+
+这里的条件不一定是“收到一个字节”。例如，FIFO里的数据量达到设定阈值，才触发接收中断。一次中断对应的可能是多笔待取数据，不能用进入处理函数的次数，直接推算收到多少个字节。
+
+外设还需要让软件知道发生了什么，因此会提供相应状态。有些状态锁存已经发生的事件，等待软件清除；有些状态与当前条件有关，例如队列是否达到阈值。读到一个状态位为1以后，我们还要知道它表示哪一种情况，才能决定怎么处理。
+
+以Arm的PL011 UART为例，接收FIFO达到配置的触发水位会产生接收中断，读走数据使水位降到阈值以下，是清除该接收中断的一种方式。它也提供独立的中断清除入口，但清除中断状态并不会取走FIFO里的数据。清除后何时再次产生请求，还要看该中断的触发规则。
+
+## 30.2 状态有了，为什么还没有中断？
+
+假设接收条件已经满足，但对应中断没有使能，外设未必会向控制器提出请求。为了区分这两件事，一些外设会分别提供原始中断状态和经过屏蔽后的中断状态：前者用于查看相应中断源的状态，后者反映哪些请求通过了本地的使能或屏蔽控制。
+
+因此，“状态位是1，但中断没来”未必是矛盾。我们可能读到了原始状态，却没有打开对应的中断输出。PL011就有这两类状态寄存器。不过，它的接收超时中断还存在使能影响事件产生的情况，不能仅凭“原始状态”这个名字，就假设任何事件在屏蔽期间都会被记录。
+
+同一个UART可能有接收、发送、超时和错误等多个中断原因。这些原因可以分别控制，再汇总成一条请求送往中断控制器。控制器看到这条请求，并不等于已经知道UART内部是哪一个原因成立。
+
+屏蔽不等于清除，解除屏蔽后能否上报先前的事件，要看状态是否被保留。即使外设已经输出请求，后面还要经过中断控制器和CPU各自的使能、屏蔽控制。
+
+## 30.3 中断控制器怎样决定通知哪个CPU？
+
+多个外设可能同时提出请求，多核SoC里也不止一个CPU可以处理。中断控制器负责管理这些请求，结合中断使能、优先级和目标CPU配置，决定哪些请求具备转发条件。
+
+以接到GIC的这一路外设中断为例，请求可以进入pending状态，表示有中断等待处理。这里的pending和UART内部的状态，记录的是不同层面的事情：UART记录自身的接收或错误原因，GIC管理这一路中断是否待处理、是否正在处理。两处状态属于不同的硬件，软件访问其中一处，不会自动完成另一处的处理。
+
+触发类型也在这里产生影响。电平型中断关注请求是否仍处于有效电平；边沿型中断则根据规定的跳变形成待处理请求，不要求输入一直保持有效。本文的UART使用电平型请求，后面能否结束当前请求，就与外设的请求信号是否恢复为无效电平有关。
+
+pending也不意味着目标CPU马上进入处理函数。该中断可能被禁用，优先级可能未达到转发要求，或者目标CPU正在处理不允许被它抢占的中断。排查时，还要确认请求被路由到了我们正在观察的CPU，而不是另一个核。
+
+## 30.4 CPU收到请求，怎样进入处理函数？
+
+请求到达CPU后，还受CPU自身的中断屏蔽和异常路由配置约束。比如软件暂时屏蔽了相应IRQ，就可能出现控制器侧有待处理请求，而当前CPU还没有进入中断入口的情况。
+
+在AArch64中，响应这类中断会进入异常处理流程。CPU保存异常返回地址和处理器状态，转到异常向量对应的入口；需要保留的通用寄存器则由入口软件保存。硬件负责转入入口，后续软件再完成保存上下文、识别来源和调用处理函数等工作。
+
+在GICv3中，有可确认的请求时，软件读取相应的中断确认寄存器，可以取得中断编号，并推进该中断的处理状态。这次确认通常称为acknowledge，表示接管处理，不表示UART的数据已经取走，也不表示中断已经完成。
+
+软件再根据中断编号分发到对应处理函数。裸机程序可以使用自己维护的分发表；Linux则通过架构入口和中断框架，调用注册的驱动处理函数。接下来，才轮到UART的处理代码读取外设状态和数据。
+
+## 30.5 进入ISR后，我们具体要处理什么？
+
+中断服务程序的英文是Interrupt Service Routine，简称ISR。进入UART的ISR后，我们仍要读取外设状态：这次是接收条件满足，还是发送、超时或错误原因触发？如果多个原因汇总在同一路中断上，不能只根据控制器返回的编号就选定处理分支。
+
+沿着接收这条路径，软件把FIFO里的数据取出，保存到后续程序能够使用的缓冲区，并检查、处理接收错误。水位降到阈值以下不代表FIFO已经空了：剩余数据仍要继续取出，或由已配置好的接收超时等机制安排后续处理，不能让它们一直留在队列里。
+
+ISR退出也不代表上层业务已经完成。数据包解析等较重的工作，可以由后续线程或其他执行路径继续处理。ISR需要先保存好数据和必要状态，把后续任务交给约定的处理路径；只打印一句“UART interrupt”，还没有完成这些工作。
+
+## 30.6 清了外设状态，为什么还没有结束？
+
+先看外设这一侧。对于前面的接收例子，如果我们读走足够的数据，让FIFO水位降到触发阈值以下，接收请求可以撤销。若同一路汇总输出上还有其他已使能的中断原因，仍需要继续处理对应原因，不能只盯着接收水位。
+
+假如我们没有处理外设，只通知控制器“本次处理结束”，请求电平却仍然有效，那么控制器侧完成后，这一路中断仍可能再次被CPU响应。于是就出现开头的现象：ISR刚退出，又进入同一个ISR。通知完成并不会替我们读取FIFO，也不会替我们消除错误原因。
+
+控制器本身也有需要结束的状态。GIC用active表示这一路中断已被接管、正在处理。清掉UART状态，并不自动解除GIC里的active；遗漏控制器要求的完成操作，可能使后续请求无法按预期再次被响应。
+
+active和pending可以同时存在。对这里的电平型中断，这可能只是原请求仍然有效，不能仅凭这两个状态就判断又发生了一次新事件。
+
+GICv3把结束处理分成两件事：恢复本次中断接管前的运行优先级，以及解除该中断的active状态。执行EOI（End of Interrupt）操作，可以根据配置同时完成这两件事，也可能只完成前者，之后还需要单独执行deactivate，解除active状态。因此，EOI不能笼统理解成“中断相关状态全部清零”。
+
+在Linux中，这些控制器操作通常由中断框架和控制器驱动承担，设备ISR负责外设本身。裸机程序则需要按所用平台安排这些步骤。
+
+消除外设的请求原因、完成控制器侧的处理、CPU从异常返回，是三个不同动作。具体操作可以由不同软件层承担，但不能省略需要的步骤，也不能用其中一个动作代替其他动作。
+
+这些操作的顺序同样需要明确。对于电平型请求，如果希望完成后不再因旧原因进入中断，就要按平台要求让外设处理结果及时生效。某些平台需要特定的访问顺序、读回或内存屏障。清除访问在代码中排在前面，不足以证明请求信号已经恢复为无效电平；应使用平台和驱动框架规定的访问方式，而不是自行加一条屏障就认为处理完成。
+
+最后，软件恢复保存的上下文，CPU按异常返回流程离开当前处理。在没有调度切换或其他待处理中断等情况时，程序可以接着执行被打断的工作。
+
+## 30.7 再来一次事件，这条链路还能走通吗？
+
+回到最初的两个现象。如果ISR一直没有进，我们可以依次确认：FIFO是否满足触发条件，外设状态是否成立，本地输出是否使能，控制器是否记录并允许转发，目标CPU是否正确，以及CPU入口和处理函数分发是否正常。每一步都对应不同证据，不必一开始就把问题归为“中断控制器坏了”或“驱动没注册好”。
+
+如果ISR反复进入，就要核对请求原因有没有消除、是否还有其他中断源、控制器完成步骤是否正确。还要区分旧请求没有结束和新数据又满足了触发条件：持续有数据输入时，再次进入接收中断可能完全正常。
+
+验证时，可以先输入一批足以触发接收中断的数据，然后停止输入。沿链路确认请求到达预期CPU、数据被正确取出，并完成外设和控制器侧的处理。本批数据及相关中断原因都处理完后，检查不会无故重复进入；再发下一批数据，确认链路还能正常响应。
+
+再检查屏蔽期间来事件、ISR处理期间继续收数的情况，确认数据和事件按设计得到保留或处理。有新数据到来时，仍有待处理状态，并不一定是异常。
+
+这样再看一次UART接收，我们就能把“中断来过”拆成可核对的过程：请求有没有送达，数据有没有交给软件，旧请求有没有结束，后续请求还能不能继续处理。走完这些步骤，才知道这条中断链路是否按预期工作。
+
+我们持续分享芯片技术内容与内推职位信息，欢迎一起关注行业技术与职业机会。如有技术经验、人才需求或内推职位等分享，欢迎私信或通过服务菜单联系我们。
+
+![](SoC验证_AI_assets/image-0062.png)
+
+---
+
+# 31. 芯片设计中，Reset释放时为什么容易出问题？
+
+> 来源：https://mp.weixin.qq.com/s/0wdZm22eqmVwMpA4yn3mXA
+> 作者：芯片验证
+> update 2026/09/15 21 : 50
+
+检查复位逻辑时，我们通常会先看：Reset有效以后，状态机有没有回到初始状态，计数器有没有清零。如果这些值都对了，很容易觉得复位已经没有问题。但解除复位后，逻辑还要重新跟着时钟运行。如果采用异步复位，就需要注：它生效时不需要等待时钟沿，释放时却需要考虑与时钟的关系。
+
+复位释放后，寄存器可以恢复正常更新。如果释放时刻离有效时钟沿太近，即使前面的复位值正确，后面的状态更新也可能出错。
+
+## 31.1 进入复位和退出复位，要求并不一样
+
+异步复位不需要等有效时钟沿，就能让触发器进入规定的复位状态。但撤销复位时，触发器需要满足相对时钟的时间间隔要求，才能恢复正常工作。这对应时序分析里的recovery和removal检查：recovery约束复位释放到随后有效时钟沿之间的最小间隔；removal约束有效时钟沿到随后复位释放之间的最小间隔。它们与数据端的setup/hold要求类似，但检查的是异步控制端。
+
+如果释放落入不满足这些要求的时间窗口，触发器可能出现亚稳态，无法保证按预期更新。复位有效阶段的最小脉宽等要求也需要满足。
+
+## 31.2 复位释放后，状态位未必同步更新
+
+一个复位信号驱动很多寄存器时，到达各个引脚的时间会受分发路径影响，时钟到达各个寄存器的时间也存在差异。如果没有处理好释放时序，一部分寄存器可能已经开始更新，另一部分还保持着复位值。
+
+假设一个独热编码状态机只有两个合法状态`01`和`10`，每次只有一个状态位为1。复位值是`01`，退出复位后的第一次转换应该进入`10`。
+
+如果在本应完成这次转换的有效时钟沿，一个状态位正常更新，另一个因复位释放时序问题仍保持复位值，就可能只完成一半转换：高位更新为1，低位仍为1，得到`11`；或者低位更新为0，高位仍为0，得到`00`。这两种结果都不在例子定义的合法状态里。这只是其中一种可能结果；如果发生recovery/removal违例，触发器也可能出现亚稳态，不能假设它一定保持复位值。
+
+复位期间的值正确，还不能证明解除复位后的第一次状态更新也正确。DMXAI芯片验证
+
+## 31.3 同步释放，要同步到哪个时钟
+
+对于需要异步复位的逻辑，常见做法是“异步生效、同步释放”。复位有效时，同步器和下游逻辑进入复位；外部复位撤销后，由目标时钟驱动同步器逐级传递释放状态，再撤销本地复位。这样可以降低异步释放带来的亚稳态传播风险，让本地复位在目标时钟驱动下释放。但同步器的级数、实现方式，以及输出到下游复位引脚的路径，仍需要满足设计要求，不能只看到两级寄存器就认为已经安全。
+
+同步到时钟A的复位，直接送给与A异步的时钟B域，仍可能在B的有效沿附近释放。每个目标域都需要有适合自身时钟的释放处理。反过来，同一时钟域里需要一起恢复的逻辑，也不能随意各放一个独立同步器。多个同步器可能在不同拍输出释放状态，让原本要协同工作的部分先后启动。是否允许这样做，要看设计有没有相应的启动协调机制。
+
+## 31.4 时钟没恢复，本地复位也可能释放不了
+
+同步释放需要目标时钟实际运行。如果这个时钟还被门控关着，外部Reset虽然已经撤销，同步器仍无法推进，本地逻辑就可能继续保持复位。例如，时钟控制逻辑要等模块退出复位才打开时钟，模块的复位同步器又等时钟才能释放，两边就会一直互相等待。检查启动顺序时，需要确认负责同步释放的时钟能先运行，并满足稳定性要求，再让本地逻辑退出复位。
+
+## 31.5 验证要看到退出复位后的状态
+
+功能验证时，可以改变外部复位释放相对时钟的相位，覆盖停钟后恢复等允许的场景。除了检查复位值，还要看本地复位何时释放、状态机第一次更新是否合法，以及逻辑是否按约定开始工作。
+
+不过，普通RTL功能仿真通常不会真实建模触发器的亚稳态行为。随机改变释放相位，有助于检查数字逻辑和启动顺序，却不能证明真实硬件满足释放时序。还需要核对同步结构，并在正确的时钟和路径约束下检查下游寄存器的recovery/removal要求。
+
+当我们看到Reset已经撤销、模块却没有正常运行时，可以继续往下查：本地时钟是否在跑，复位同步器是否完成释放，需要协同的状态位是否从预期的那一拍开始更新。只检查复位值，会漏掉这段恢复运行的过程。
+
+欢迎关注公众号，我们一起关注芯片相关技术分享。如果您也想将自己的一些经验分享给更多同学，欢迎通过公众号服务-联系反馈菜单，提交想法或者加好友。
+
+---
+
+# 32. 只读一个寄存器，为什么也可能改变芯片状态？
+
+> 来源：https://mp.weixin.qq.com/s/I0EJGGsN9OTg4YefLp53Bw
+> 作者：芯片验证
+> update 2026/09/15 21 : 50
+
+排查芯片问题时，我们经常会先读一下状态寄存器，看看错误标志有没有置位。如果调试脚本读到了1，驱动随后读到的却是0，我们可能会怀疑：是谁清掉了状态？
+
+如果这个字段采用读清零机制，脚本的那次读取就可能已经清掉了标志。整个过程中，我们没有执行任何写操作，芯片里的状态却已经变了。
+
+寄存器访问由硬件逻辑处理。对于某些寄存器，硬件在返回读值的同时，还会执行清除标志、取出数据等动作。这类行为通常称为读取副作用（read side effect），它可以是设计规定的正常行为。
+
+## 32.1 一次读取，也可以清掉状态
+
+读清零（Read-to-Clear，常见标记为RC）就是一种典型情况：硬件记录事件，软件读取状态时，硬件会按spec清除相应字段。具体清除哪些位、在哪个时刻生效，要看寄存器spec。
+
+假设有一个读清零的错误标志，事件发生后被置为1。按这个例子的约定，第一次读取返回1，并清掉该标志；清除生效后，如果没有新事件，第二次读取就返回0。
+
+这样设计，可以让软件在获取事件记录时一并清除标志，省去一次单独的清除操作。清除动作由读访问触发，并不取决于读值最后交给了错误处理代码，还是仅仅显示在调试窗口里。
+
+## 32.2 脚本先读了，驱动还能看到什么
+
+沿着这个例子，如果脚本先读取了标志，却没有把结果交给驱动，驱动随后就可能按“没有错误待处理”继续执行。假如脚本也没有保存首次读值，排查时还会少掉一条事件记录。
+
+对读清零字段，驱动读到0，并不能直接证明事件没有发生；还需要确认此前有没有其他访问清掉了记录。DMXAI芯片验证
+
+批量读取寄存器的dump脚本、自动刷新的寄存器窗口，都需要考虑这一点。只要它们实际发出了会触发清除的读访问，就可能影响后续程序看到的状态。具体是否发生，取决于工具的访问方式和硬件定义，不能仅凭“这是调试操作”就认为没有影响。
+
+## 32.3 读FIFO时，数据也可能被取走
+
+读取带来的变化不止清零。有些FIFO数据寄存器在被读取时，会返回队首数据，同时让这笔数据出队。
+
+假设这样的FIFO里依次存着A、B两笔数据。调试脚本先读一次，拿走A；业务代码再读，拿到的就是B。如果我们没有意识到前一次读取已经消耗了数据，就可能把现象误判为接收端漏了一笔。
+
+这里消耗的是队列里的数据，和清除状态标志是两种不同机制。是否有不出队的查看入口、一次读取消耗多少数据，都要按具体接口确认。
+
+## 32.4 不能只看RO，还要读访问说明
+
+查手册时，除了读写属性，还要看字段描述和操作流程：读取会不会清除状态？清除的是当前字段，还是另一个寄存器里的标志？有没有规定访问顺序？
+
+Intel的PCH寄存器文档中，`IC_CLR_INTR`标为只读（RO），读取它却会触发相关中断状态的清除。这是独立的清除入口，与前面的RC状态字段有所不同。RO限制的是软件写入，读取会触发哪些动作，仍要看字段描述和访问规则。
+
+如果需要多个软件环节查看同一次事件记录，可以由约定的处理路径读取并保存结果，其他环节查看这份记录，避免各自重复读取硬件。保存的是当时的状态，不代表后续没有新事件。
+
+批量dump时，应按手册排除会触发清除或出队的地址；需要观察时，优先使用手册明确支持的不改变状态的读取方式。
+
+## 32.5 验证时，也要检查读取之后
+
+验证读清零字段时，我们既要检查第一次读取返回的值，也要检查清除生效后的状态。可以先触发事件，再读取并检查返回值，随后在没有新事件和其他清除操作的条件下再次读取，确认相应标志已按spec清零。
+
+验证序列里为了打印日志而增加的读取，也可能触发相同动作。安排激励和检查时，需要把这些访问算进去，否则后续检查面对的状态，可能已经被验证代码自己改过。
+
+以后遇到“刚才还有，怎么再读就没了”，我们可以先对照访问记录：谁读过、读了哪个地址、那次读取按手册会触发什么动作。把这个过程还原出来，才能判断状态是被某次读取清掉了，还是硬件没有按预期保留。
+
+欢迎关注公众号，我们一起关注芯片相关技术分享。如果您也想将自己的一些经验分享给更多同学，欢迎通过公众号服务-联系反馈菜单，提交想法或者加好友。
+
+---
+
+# 33. 芯片寄存器里的Reserved bit，为什么不能随便写？
+
+> 来源：https://mp.weixin.qq.com/s/63WmVQ2q1omqJktPOvnEgg
+> 作者：芯片验证
+> update 2026/09/15 21 : 51
+
+写驱动或调试寄存器时，我们经常会在手册里看到一些标着`reserved`、`RSVD`或“保留”的位，也就是Reserved bit。
+
+一个32位寄存器，可能只有几个位用于使能、模式选择或状态指示，其余位置在手册里标为Reserved。看到这些位置没有具体的功能名称，我们可能会觉得：既然用不上，写什么应该都一样吧？
+
+这里需要区分两件事：有没有公开功能定义，以及软件应该怎么访问。手册没有给保留位定义可供软件使用的功能，不代表软件就可以随便写。它仍可能要求这些位写0、保持复位值，或者原样写回读出的值。这些要求可能写在字段说明里，也可能统一写在寄存器章节开头。
+
+因此，看到Reserved标记后，我们还要查清对应的访问要求。单看这个标记，不能确定这些位有没有实现逻辑，也不能认定它们可以随便写。手册没有说清的地方，也不能靠一次读写结果自己下结论。
+
+如果手册要求某个保留位写0，我们就不能因为它没有公开的功能用途，顺手把它写成1。即使这次运行没有异常，也不能据此认为这种写法可用。DMXAI芯片验证
+
+## 33.1 只改一个bit，为什么也会写到保留位
+
+假设我们要将某个32位寄存器中的使能位置为1，用`ENABLE`表示这个位的掩码，驱动里常见这种写法：
+
+```
+val = readl(REG_CTRL);
+val |= ENABLE;
+writel(val, REG_CTRL);
+```
+
+这叫读-改-写（read-modify-write，RMW）：先把寄存器的值读到临时变量`val`中，修改其中的目标位，再写回寄存器。
+
+我们本来只想把使能位置为1。`val |= ENABLE`只将临时变量里的对应位置为1，但`writel()`会把整个32位数值写入寄存器。其他位虽然保持了读出时的值，也会一起写回，包括保留位对应的值。
+
+问题就在这里：**读出的值，未必就是手册允许写回的值。** 如果手册规定某个保留位读值未定义、写入必须为0，那么直接把读值写回，就不能保证满足要求。
+
+所以问题不在RMW这个动作本身，而在于写回寄存器的每一位是否都符合手册要求。如果手册允许原样写回，而且其他字段的读写也不会带来问题，这种写法仍然可以使用。
+
+## 33.2 写回之前，要确认哪些要求
+
+处理保留位时，我们可以先看手册要求写回什么：
+
+- 要求写0：在准备写入的数据中，将这些保留位对应的位置设为0。
+- 要求保持复位值：按手册给出的复位值设置这些位置，不能默认所有保留位的复位值都是0。
+- 要求原样写回：在写入数据中保留这些位的读值，不要顺手改成0或1。
+
+还要检查同一寄存器里的其他字段。W1C（写1清零）状态位如果读出来是1，原样写回就会清除该状态；RC（读清零）字段在读取时就可能已经改变硬件状态；WO（只写）字段则不能靠读取来获得原来写入的值。也就是说，即使保留位处理正确，整个寄存器也未必适合直接读-改-写。
+
+除非手册明确允许，否则不要为了“把功能都打开”就向整个寄存器写入`0xffffffff`。实际代码应根据手册中的字段定义和访问要求，确定掩码及最终写入值。
+
+## 33.3 换一版芯片，旧写法可能出问题
+
+有些原来标为Reserved的位置，后续芯片版本可能会被定义成新的功能位。假设旧版手册要求某个保留位写0，但旧驱动一直把它写成1，只是运行时没有发现异常。换到新版芯片后，如果这个位置被定义为某项功能的使能位，原来的写法就可能意外打开这项功能。
+
+这个时候，代码没变，硬件对这个1的解释却变了。遵守旧版手册的保留位要求，有助于减少这类兼容性问题；迁移到新型号或新硅版本时，仍然需要核对对应的寄存器定义。
+
+## 33.4 验证时，把手册里的要求落到检查上
+
+做寄存器验证时，手册明确规定的行为要逐项检查。如果某些保留位规定为“写入被忽略”，我们可以在相同初始状态和输入条件下，只改变这些保留位对应的写入值，比较已定义功能的行为是否一致。其他功能位仍应按手册规定响应，不能把“保留位写入被忽略”理解成整次寄存器写入都被忽略。对于手册没有规定的行为，需要先澄清，不能自行假定结果。
+
+到了Bring-up阶段，如果一次寄存器配置后外设出现异常，我们也可以检查实际写入的数据：除了目标字段，其他位置填入了什么值？这比只盯着使能位有没有置1，更容易发现访问方式上的问题。
+
+写寄存器时，我们不只要确认目标字段怎么改，还要检查其余位会被写成什么。Reserved bit怎么处理，要按当前芯片手册来，不能靠一次运行正常就下结论。
+
+---
+
+# 34. GPIO 概念与 PL061 控制器实现·学习笔记
+
+> 来源：https://mp.weixin.qq.com/s/PcgfSOUQEbLAiCgzlMWhtQ
+> 作者：Hope
+> update 2026/09/15 21 : 51
+
+📖 本篇导读
+
+本文完整整理《GPIO 概念与 PL061 控制器实现·学习笔记》，覆盖第1章至第6章，共6个章节。先看这份地图，能帮你快速定位想读的内容：
+
+• **第1章**：GPIO 引言：PL061 = APB 从设备 + 8 个可编程引脚，双模式控制，地址掩码与逐引脚中断两大特色
+
+• **第2章**：功能块与双模式：5 类寄存器 + 模式控制，GPIOAFSEL 切软件/硬件，硬件控制三组端口 nGPAFEN/GPAFOUT/GPAFIN
+
+• **第3章**：数据寄存器与地址掩码：GPIODATA 占 256 地址，PADDR[9:2] 当掩码，写「1 改 0 不动」读「1 真值 0 读零」，GPIODIR 定方向
+
+• **第4章**：中断系统：7 寄存器触发链 IS→IBE→IEV→IE→RIS/MIS→IC，初始化顺序防伪中断
+
+• **第5章**：寄存器总览与标识：0x400 起 DIR/IS/IBE/IEV/IE/RIS/MIS/IC/AFSEL，PeriphID=0x061(ARM)、PCellID=0xB105F00D
+
+• **第6章**：信号与总结：APB/片上/pad 三组信号，配置输出/读输入/配中断/切硬件的编程清单，全书主线
+
+—— 以下进入正文 ——
+
+![](SoC验证_AI_assets/image-0063.png)
+
+## 34.1 GPIO 概述
+
+GPIO（General Purpose Input/Output，通用输入/输出）是 SoC 里最基础、也最常用的外设。这一章先讲清楚它是什么、能干什么。
+
+◆ 核心观点：PL061 是 ARM 的 PrimeCell GPIO IP，本质是一个挂在 AMBA APB 总线上的**从设备**，对外提供 **8 个可独立编程方向的引脚**。它最特别的两个能力是：① 读写数据时用**地址线当掩码**，一次只动想动的引脚；② 每个引脚都能独立配成**中断源**（电平或边沿触发）。抓住这两点，GPIO 就学完一半了。
+
+### 34.1.1 关于 PL061 GPIO
+
+PL061 是一个符合 AMBA 规范的 SoC 外设，由 ARM 开发、测试并授权。它是一个 **AMBA 从设备（slave）**，挂在 **APB（Advanced Peripheral Bus）** 上。
+
+它提供 8 个可编程的输入/输出引脚，支持**两种控制模式**：
+
+|  |  |  |
+| --- | --- | --- |
+| 模式 | 控制途径 | 说明 |
+| **软件模式** | APB 总线接口 | CPU 通过读写寄存器来操作引脚（默认模式） |
+| **硬件模式** | 硬件控制接口 | 引脚交给其他外设（辅助源）直接驱动 |
+
+关键设计点：
+
+• 可以通过**多次实例化**拼出更宽的端口，例如 16、24、32、40 位；
+
+• 提供**中断接口**，任意数量的引脚都可配成中断源；
+
+• 中断可以由**电平**或**跳变（边沿）**触发；
+
+• **系统复位后，所有引脚默认是输入**（安全方向，不会乱驱动总线）；
+
+• 每个 pad 用三根线对接：数据输入（GPIN）、数据输出（GPOUT）、输出使能（nGPEN）。
+
+### 34.1.2 特性清单
+
+PL061 提供的特性，按重要性排序：
+
+1. **AMBA 规范兼容**（Rev 2.0 起），容易集成进 SoC；
+
+2. **8 个可独立编程的 I/O 引脚**，复位默认输入；
+
+3. **可扩展性**：多次实例化拼成 16/24/32/40 位甚至更宽；
+
+4. **可编程中断**：任意引脚，电平或跳变触发；
+
+5. **硬件控制能力**：引脚可切换给外部辅助源驱动，适应不同系统配置；
+
+6. **读写位掩码**：通过地址线在读写时做位掩码（这是 PL061 最独特的机制，第 3 章细讲）；
+
+7. **标识寄存器**：唯一标识该外设（PeriphID / PCellID，第 5 章细讲）。
+
+### 34.1.3 整体框图
+
+![](SoC验证_AI_assets/image-0064.png)
+
+图 1-1　PL061 GPIO 框图与 pad 连接（PrimeCell GPIO block diagram and pads connections）
+
+PL061 的内部结构如图 1-1 所示，可以拆成几个块：
+
+• **AMBA APB 接口**：接收 PSEL/PENABLE/PWRITE/PADDR/PWDATA，驱动 PRDATA；
+
+• **寄存器块（Register block）**：存放数据、方向、中断、模式、标识等寄存器；
+
+• **模式控制多路选择器（Mode control multiplexor）**：根据 GPIOAFSEL 决定引脚由软件还是硬件控制；
+
+• **输入/输出控制（Input/output control）**：产生 nGPIODIR、GPIODATA、GPINSync2 等；
+
+• **输入/输出多路选择器（Input/output multiplexor）**：把数据送到 pad，或从 pad 读回；
+
+• **中断控制 + 中断检测逻辑（Interrupt control / detection logic）**：产生 GPIOMIS 与合并的 GPIOINTR；
+
+• **ID 块**：提供标识寄存器。
+
+◆ 记忆要点：PL061 = **APB 从设备 + 8 引脚**，三种引脚信号（GPIN 输入 / GPOUT 输出 / nGPEN 输出使能），两种控制模式（软件 / 硬件），两个杀手锏（**地址掩码读写**、**逐引脚中断**）。
+
+## 34.2 功能块与双模式控制
+
+这一章讲 PL061 内部由哪几个功能块组成，以及「软件控制 / 硬件控制」两种模式是怎么切换的。
+
+◆ 核心观点：PL061 的寄存器块可以归成五类——**数据方向、数据、中断控制、模式控制、标识**。其中「模式控制」决定了每个引脚到底听谁的：默认听 CPU（软件模式，走 APB），把 GPIOAFSEL 对应位置 1 后改听**硬件辅助源**（硬件模式，走 nGPAFEN/GPAFOUT/GPAFIN 三组端口）。这个「复用」能力让 GPIO 引脚能被别的外设共享。
+
+### 34.2.1 五大寄存器类
+
+CPU 通过 APB 接口访问 PL061 的数据、控制、状态信息。PL061 包含这些寄存器（按功能归类）：
+
+|  |  |  |
+| --- | --- | --- |
+| 类别 | 寄存器 | 作用 |
+| 数据方向 | GPIODIR | 每位置 1 = 输出，清 0 = 输入 |
+| 数据 | GPIODATA | 读输入值 / 写输出值（带地址掩码） |
+| 中断控制 | GPIOIS / IBE / IEV / IE / RIS / MIS / IC | 7 个寄存器配触发 + 看状态 + 清除 |
+| 模式控制 | GPIOAFSEL | 每位置 1 = 硬件控制，清 0 = 软件控制 |
+| 标识 | PeriphID / PCellID | 唯一标识外设，供 BIOS 自动识别 |
+
+### 34.2.2 模式控制：软件 vs 硬件
+
+![](SoC验证_AI_assets/image-0065.png)
+
+图 2-6　模式控制多路选择器（Mode control multiplexor）
+
+每个 GPIO 引脚都可以在**软件控制**和**硬件控制**之间切换，切换开关就是 **GPIOAFSEL**（mode control select register）：
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| GPIOAFSEL 位 | 模式 | 数据方向由谁定 | 数据由谁读写 |
+| 0（默认） | **软件控制** | GPIODIR 寄存器 | 通过 APB 读写 GPIODATA |
+| 1 | **硬件控制** | 辅助端口方向控制引脚 | 通过辅助端口读写（APB 仍可读引脚状态） |
+
+要点：
+
+• **软件模式**（默认）：数据方向由 GPIODIR 定，数据读写都走 APB 接口；
+
+• **硬件模式**：数据方向改由辅助端口（nGPAFEN）控制，数据改由辅助端口（GPAFOUT/GPAFIN）读写；但**引脚状态仍可通过 APB 读回**；
+
+• 硬件模式下，GPIODATA 寄存器依然能读那些配成输入的引脚的值。
+
+图 2-6 展示了模式控制多路选择器的结构：nGPIODIR/GPIODATA 是软件侧，nGPAFEN/GPAFOUT/GPAFIN 是硬件侧，GPIOAFSEL 当选择开关。
+
+### 34.2.3 硬件控制接口的三组信号
+
+硬件模式下，引脚交给外部辅助源，用到三组信号（每组 8 位，对应 8 个引脚）：
+
+|  |  |  |
+| --- | --- | --- |
+| 信号 | 方向（相对 GPIO） | 含义 |
+| nGPAFEN[7:0] | 输入 | 硬件控制**输出使能**，低有效；不用时需接高 |
+| GPAFOUT[7:0] | 输入 | 硬件控制的**数据输入**（辅助源要输出的值）；不用时可接低或高 |
+| GPAFIN[7:0] | 输出 | 硬件控制的**数据输出**（引脚值送还给辅助源） |
+
+简单理解：硬件模式下，`GPAFOUT` 是「辅助源想往引脚上写的数据」，`nGPAFEN` 决定这个引脚是输出还是输入，`GPAFIN` 是「引脚当前值」回送给辅助源。
+
+◆ 记忆要点：模式切换靠 **GPIOAFSEL**——0 软件 / 1 硬件。软件模式用 GPIODIR+GPIODATA 走 APB；硬件模式改用 nGPAFEN（方向）+ GPAFOUT（写）+ GPAFIN（读）三组端口，APB 仍能偷看引脚状态。这个机制让 GPIO 引脚能被其他外设**复用共享**。
+
+## 34.3 数据寄存器与地址掩码
+
+这一章是 PL061 的**精髓**：GPIODATA 寄存器用地址线做位掩码，让软件能一次只改想改的引脚，而完全不碰其他引脚。
+
+◆ 核心观点：GPIODATA 这一个 8 位寄存器，在内存映射里**占了 256 个地址**（偏移 0x000～0x3FC）。多出来的地址不是浪费——它们的 `PADDR[9:2]` 八根线被当成了**位掩码**：写的时候，地址位=1 的位才被改写，地址位=0 的位保持不变；读的时候，地址位=1 的位读回真实值，地址位=0 的位直接读成 0。这个设计让「读-改-写」变成了一条指令，还避免了多任务之间互相踩引脚。
+
+### 34.3.1 GPIODATA：一个寄存器占 256 个地址
+
+GPIODATA 是数据寄存器，8 位宽：
+
+• 软件模式下，写入的值会送到 GPOUT 引脚——但只对**通过 GPIODIR 配成输出**的引脚生效；
+
+• 读的时候，配成输出的位返回**上一次写入的值**，配成输入的位返回**引脚当前值（GPIN）**；
+
+• 复位后所有位清 0。
+
+关键机制：这个寄存器在地址空间里**重复映射了 256 次**（偏移 0x000 到 0x3FC）。这 256 个地址的差别只在 `PADDR[9:2]` 八根线上，而这八根线被用作**读写位掩码**。好处是：**独立的软件驱动可以在单次写操作里只改自己的位，不影响任何其他引脚**——不需要先读出、改位、再写回（不用 read-modify-write）。
+
+### 34.3.2 写操作的地址掩码
+
+![](SoC验证_AI_assets/image-0066.png)
+
+图 2-2　写地址掩码示例：地址 0x098（Example Write to address 0x098）
+
+写 GPIODATA 时，**地址位（PADDR[9:2]）为 1 的位才会被改写**，为 0 的位保持不变。
+
+**例子**：往地址 `GPIODATA + 0x098` 写 `0xFB`。
+
+• `0x098` = 二进制 `0b000010011000`，取 `PADDR[9:2]` = `0b0000100110`；
+
+• 展开：`PADDR[9:2]` 的第 0 位对应数据 bit 0，第 1 位对应 bit 1……所以掩码选中了 **bit 5、bit 2、bit 1**（这三个地址位是 1）；
+
+• 写入值 `0xFB` = `1111 1011`，于是：
+
+• bit 5 → 写 1；bit 2 → 写 0；bit 1 → 写 1；
+
+• 其余位（7、6、4、3、0）**保持不变**。
+
+|  |  |  |  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 地址位 PADDR[9:2] | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 |
+| 0x098 | 0 | 0 | 1 | 0 | 0 | 1 | 1 | 0 |
+| 写 0xFB | 1 | 1 | 1 | 1 | 1 | 0 | 1 | 1 |
+| 结果 GPIODATA | u | u | 1 | u | u | 0 | 1 | u |
+
+◆ 表中 `u` 表示该位保持不变（unchanged）。
+
+### 34.3.3 读操作的地址掩码
+
+![](SoC验证_AI_assets/image-0067.png)
+
+图 2-3　读地址掩码示例：地址 0x0C4（Example Read from address 0x0C4）
+
+读 GPIODATA 时，**地址位为 1 的位读回真实值，为 0 的位读成 0**（不管引脚实际是什么电平）。
+
+**例子**：从地址 `GPIODATA + 0x0C4` 读。
+
+• `0x0C4` = `0b000011000100`，取 `PADDR[9:2]` = `0b0000110001`，掩码选中 **bit 5、bit 4、bit 0**；
+
+• 假设引脚实际是 `GPIN[7:0] = 1111 1110`；
+
+• 读回 `PRDATA[7:0] = 0011 0000`：bit 5/4/0 读回真实值（1、1、0），其余位被掩成 0。
+
+|  |  |  |  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PADDR[9:2] | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 |
+| 0x0C4 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 1 |
+| GPIN[7:0] | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 |
+| PRDATA[7:0] | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+
+**实用技巧**：想要一次读/写**全部 8 位**，用地址偏移 `0x3FC`（`PADDR[9:2]` 全 1）。
+
+### 34.3.4 GPIODIR：方向寄存器
+
+![](SoC验证_AI_assets/image-0068.png)
+
+图 2-4　写方向寄存器时序（Write to data direction register）
+
+GPIODIR 是数据方向寄存器，8 位宽，每个位对应一个引脚：
+
+|  |  |
+| --- | --- |
+| GPIODIR 位 | 引脚方向 |
+| 1 | **输出** （output） |
+| 0 | **输入** （input） |
+
+复位后所有位清 0，所以**默认所有引脚都是输入**。这与 PL061「上电不误驱动」的安全设计一致。
+
+### 34.3.5 复位与初始化
+
+• **接口复位**：上电复位（PRESETn 拉低）期间所有寄存器清 0，输出驱动器被禁用，引脚全配成输入；
+
+• **配置时**（PRESETn 拉低时）还会：禁用所有中断（GPIOIE 清 0）、清除原始中断、选择边沿触发为默认中断源。
+
+◆ 记忆要点：**地址掩码**是 PL061 的头号特性——GPIODATA 占 256 个地址，`PADDR[9:2]` 当掩码，写时「1 才改、0 不动」，读时「1 读真值、0 读成 0」；想操作全部位就用偏移 `0x3FC`。方向寄存器 GPIODIR「1 输出、0 输入」，复位全 0 即**全输入**。
+
+## 34.4 中断系统
+
+PL061 的每个引脚都能独立配成中断源，靠 **7 个中断寄存器**组成一条触发链。这一章把这条链彻底讲清楚。
+
+◆ 核心观点：中断触发由 **3 个寄存器**（GPIOIS、GPIOIBE、GPIOIEV）决定「什么事件触发」，再由 **1 个寄存器**（GPIOIE）决定「要不要放行」，最后用 **2 个状态寄存器**（GPIORIS、GPIOMIS）看结果，用 **1 个寄存器**（GPIOIC）清除边沿。串成一句话：**IS 选边沿/电平 → IBE 选单/双边沿 → IEV 选上升/下降（或高/低）→ IE 放行 → RIS/MIS 看状态 → IC 写 1 清除**。
+
+### 34.4.1 七个中断寄存器
+
+每个引脚（bit）对应一份，8 位寄存器共管 8 个引脚：
+
+|  |  |  |
+| --- | --- | --- |
+| 寄存器 | 类型 | 作用 |
+| GPIOIS | R/W | 中断感应：0=边沿触发，1=电平触发 |
+| GPIOIBE | R/W | 双边沿：1=上升+下降都触发（忽略 IEV） |
+| GPIOIEV | R/W | 边沿时：1=上升/1=高电平；0=下降/低电平 |
+| GPIOIE | R/W | 中断使能（掩码）：1=放行，0=屏蔽 |
+| GPIORIS | 只读 | **原始** 中断状态（屏蔽前） |
+| GPIOMIS | 只读 | **屏蔽后** 中断状态（被 GPIOIE 遮掉的就看不到） |
+| GPIOIC | 只写 | 中断清除：写 1 清除对应边沿检测逻辑 |
+
+这 7 个寄存器里，`GPIOIS`、`GPIOIBE`、`GPIOIEV` 三个共同决定「触发条件」，是理解中断的关键。
+
+### 34.4.2 触发链：IS → IBE → IEV
+
+![](SoC验证_AI_assets/image-0069.png)
+
+图 2-5　GPIO 中断寄存器触发链（PrimeCell GPIO interrupt registers）
+
+触发条件的判定顺序（见图 2-5 的流程图）：
+
+1. **GPIOIS** 先选大方向：0 = 走**边沿**检测，1 = 走**电平**检测；
+
+2. 若走边沿，**GPIOIBE** 决定：1 = **双边沿**（上升+下降都触发，此时忽略 IEV），0 = 单边沿（交给 IEV）；
+
+3. 单边沿时，**GPIOIEV** 定极性：1 = 上升沿（或高电平），0 = 下降沿（或低电平）；
+
+4. 最后 **GPIOIE** 做总开关：1 = 放行，0 = 屏蔽（屏蔽后不产生中断）。
+
+**实例**：让输入引脚 2 在**上升沿**触发中断，需要这样配：
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| 寄存器 | 需要的值 | 位 2 | 其他位 |
+| GPIOIS | 0 = 边沿 | 0 | x |
+| GPIOIBE | 0 = 单边沿 | 0 | x |
+| GPIOIEV | 1 = 上升沿 | 1 | x |
+| GPIOIE | 1 = 使能 | 1 | 0（其余全屏蔽） |
+
+◆ 表中 `x` 表示该位无关紧要——因为它被 GPIOIE 屏蔽了。
+
+### 34.4.3 状态与清除：RIS → MIS → IC
+
+• **GPIORIS**（raw）：读为 1 表示「触发条件已满足」，**还没经过 GPIOIE 屏蔽**；
+
+• **GPIOMIS**（masked）：读为 1 表示「引脚正在申请中断」，是**屏蔽之后**的状态；读为 0 可能是没触发，也可能是被屏蔽了；
+
+• **GPIOINTR**：单根合并输出 = GPIOMIS[7:0] 的**逻辑或**，送给中断控制器；
+
+• **GPIOIC**：**写 1 清除**对应边沿检测逻辑，写 0 无效果（只写寄存器）。
+
+设计意图：既提供**合并输出 GPIOINTR**，也提供**独立输出 GPIOMIS[7:0]**，让你可以用一个全局中断服务例程，也可以为每个引脚写独立驱动。
+
+### 34.4.4 中断初始化顺序（避免伪中断）
+
+边沿触发的中断，初始化顺序很重要，否则会产生**伪中断**。推荐顺序：
+
+1. 先按需配 **GPIOIBE**（单/双边沿）；
+
+2. 若选了单边沿，再配 **GPIOIEV**（上升/下降）；
+
+3. 配 **GPIOIS** 选边沿路径；
+
+4. 施加**三个时钟周期**，清空中断流水线；
+
+5. 整个过程中保持 GPIN[7:0] 稳定；
+
+6. 写 **0xFF 到 GPIOIC**，清除所有挂起中断；
+
+7. 最后配 **GPIOIE** 使能中断。
+
+◆ 记忆要点：三个「触发寄存器」记住口诀——**IS 定边沿/电平，IBE 定单/双边沿，IEV 定上升/下降（高低）**；再加 IE 当总闸、RIS/MIS 看状态、IC 写 1 清除。初始化务必「**先配触发、再清中断、最后开 IE**」，否则会招来伪中断。
+
+## 34.5 寄存器总览与标识
+
+这一章把 PL061 的全部寄存器按地址排一遍，并讲清楚标识寄存器怎么唯一识别这个外设。
+
+◆ 核心观点：PL061 的寄存器布局很规整——**数据寄存器占一大片**（0x000～0x3FC，就是第 3 章说的 256 个地址），方向/中断/模式寄存器从 0x400 依次排到 0x420，最后 0xFE0 起是 4 个 PeriphID 和 4 个 PCellID。两个标识寄存器分别给出**「我是谁」（PartNumber=0x061，设计者是 ARM=0x41）**和**「我是 PrimeCell」（PCellID=0xB105F00D）**。
+
+### 34.5.1 寄存器一览
+
+基地址不固定（由系统定），但各寄存器的**偏移固定**：
+
+|  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- |
+| 地址偏移 | 类型 | 宽度 | 复位值 | 名称 | 说明 |
+| 0x000～0x3FC | R/W | 8 | 0x00 | **GPIODATA** | 数据寄存器（地址掩码，256 个地址） |
+| 0x400 | R/W | 8 | 0x00 | **GPIODIR** | 数据方向寄存器 |
+| 0x404 | R/W | 8 | 0x00 | **GPIOIS** | 中断感应寄存器 |
+| 0x408 | R/W | 8 | 0x00 | **GPIOIBE** | 中断双边沿寄存器 |
+| 0x40C | R/W | 8 | 0x00 | **GPIOIEV** | 中断事件寄存器 |
+| 0x410 | R/W | 8 | 0x00 | **GPIOIE** | 中断掩码寄存器 |
+| 0x414 | 读 | 8 | 0x00 | **GPIORIS** | 原始中断状态 |
+| 0x418 | 读 | 8 | 0x00 | **GPIOMIS** | 屏蔽后中断状态 |
+| 0x41C | 写 | 8 | 0x00 | **GPIOIC** | 中断清除寄存器 |
+| 0x420 | R/W | 8 | 0x00 | **GPIOAFSEL** | 模式控制选择寄存器 |
+| 0x424～0xFCC | — | — | — | — | 保留（未来扩展/测试用） |
+| 0xFE0 | 读 | 8 | 0x61 | **GPIOPeriphID0** | 外设标识 [7:0] |
+| 0xFE4 | 读 | 8 | 0x10 | **GPIOPeriphID1** | 外设标识 [15:8] |
+| 0xFE8 | 读 | 8 | 0x04 | **GPIOPeriphID2** | 外设标识 [23:16] |
+| 0xFEC | 读 | 8 | 0x00 | **GPIOPeriphID3** | 外设标识 [31:24] |
+| 0xFF0 | 读 | 8 | 0x0D | **GPIOPCellID0** | PrimeCell 标识 [7:0] |
+| 0xFF4 | 读 | 8 | 0xF0 | **GPIOPCellID1** | PrimeCell 标识 [15:8] |
+| 0xFF8 | 读 | 8 | 0x05 | **GPIOPCellID2** | PrimeCell 标识 [23:16] |
+| 0xFFC | 读 | 8 | 0xB1 | **GPIOPCellID3** | PrimeCell 标识 [31:24] |
+
+### 34.5.2 数据与方向寄存器
+
+• **GPIODATA**：数据寄存器，读写都受**地址掩码**控制（见第 3 章）；
+
+• **GPIODIR**：方向寄存器，1=输出、0=输入。
+
+### 34.5.3 中断寄存器
+
+第 4 章已详述：GPIOIS/GPIOIBE/GPIOIEV 定触发，GPIOIE 使能，GPIORIS/GPIOMIS 看状态，GPIOIC 清除。
+
+### 34.5.4 模式控制寄存器
+
+• **GPIOAFSEL**：1=硬件控制，0=软件控制（第 2 章已详述）。
+
+### 34.5.5 标识寄存器
+
+![](SoC验证_AI_assets/image-0070.png)
+
+图 3-1　外设标识寄存器位分配（Peripheral identification register bit assignment）
+
+![](SoC验证_AI_assets/image-0071.png)
+
+图 3-2　PrimeCell 标识寄存器位分配（PrimeCell identification register bit assignment）
+
+两组标识寄存器，都是硬编码、只读，供 BIOS 自动扫描识别：
+
+**外设标识（GPIOPeriphID0-3）**——把 4 个 8 位寄存器合起来看作一个 32 位数，分四段：
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| 字段 | 位 | 值 | 含义 |
+| Configuration | [31:24] | 0x00 | 配置选项 |
+| Revision | [23:20] | 0x0 | 版本号（从 0 起） |
+| Designer | [19:12] | 0x41 | 设计者 ARM（ASCII 'A'） |
+| PartNumber | [11:0] | 0x061 | 产品代码 061 |
+
+拆到单个寄存器：PeriphID0=0x61、PeriphID1=0x10（低 4 位 PartNumber1=0，高 4 位 Designer0=1）、PeriphID2=0x04（低 4 位 Designer1=4，高 4 位 Revision=0）、PeriphID3=0x00。
+
+**PrimeCell 标识（GPIOPCellID0-3）**——固定为 **0xB105F00D**，是 ARM PrimeCell 外设的通用「身份证」，任何 PrimeCell 外设都是这个值：
+
+|  |  |
+| --- | --- |
+| 寄存器 | 值 |
+| GPIOPCellID0 | 0x0D |
+| GPIOPCellID1 | 0xF0 |
+| GPIOPCellID2 | 0x05 |
+| GPIOPCellID3 | 0xB1 |
+
+注意：PL061 的存储空间是 **4KB**，访问标识寄存器必须用 **32 位**（LDR/STR）访问。
+
+◆ 记忆要点：寄存器从 0x400 起依次是 **DIR、IS、IBE、IEV、IE、RIS、MIS、IC、AFSEL**（各占 4 字节地址）；数据寄存器 GDATA 独占 0x000～0x3FC。标识两件套：**PeriphID = 0x00/0x10/0x04/0x61**（PartNumber 061、Designer 41），**PCellID = 0xB105F00D**（PrimeCell 通用身份证）。
+
+## 34.6 信号与总结
+
+这一章收尾：把 PL061 的全部信号按类别列一遍，再给一份「编程清单」和全书主线。
+
+◆ 核心观点：PL061 的信号分三组——**APB 信号**（挂总线，P 前缀）、**片上信号**（接其他外设，含硬件控制 nGPAFEN/GPAFOUT/GPAFIN 和中断 GPIOMIS/GPIOINTR）、**到 pad 的信号**（接芯片引脚 nGPEN/GPOUT/GPIN）。学完整本书，只要记住一条主线：**GPIO = APB 从设备 + 8 引脚，用 GPIODIR 定方向、GPIODATA 传数据（地址掩码）、GPIOAFSEL 切模式、7 个中断寄存器管中断**。
+
+### 34.6.1 AMBA APB 信号
+
+PL061 作为 APB 从设备，P 前缀、高有效，低有效信号含小写 n：
+
+|  |  |  |
+| --- | --- | --- |
+| 信号 | 方向 | 说明 |
+| PRESETn | 输入 | 总线复位，低有效 |
+| PCLK | 输入 | APB 时钟，所有传输的节拍 |
+| PSEL | 输入 | 选中信号，1 表示本设备被选中 |
+| PENABLE | 输入 | 使能，拉高一拍完成一次传输 |
+| PWRITE | 输入 | 高=写，低=读 |
+| PADDR[11:2] | 输入 | 地址总线子集 |
+| PWDATA[7:0] | 输入 | 写数据 |
+| PRDATA[7:0] | 输出 | 读数据 |
+
+### 34.6.2 片上信号
+
+接芯片内其他模块的信号：
+
+|  |  |  |
+| --- | --- | --- |
+| 信号 | 方向 | 说明 |
+| nGPAFEN[7:0] | 输入 | 硬件控制输出使能，低有效，不用时接高 |
+| GPAFOUT[7:0] | 输入 | 硬件控制数据输入，不用时可接低或高 |
+| GPAFIN[7:0] | 输出 | 硬件控制数据输出 |
+| GPIOMIS[7:0] | 输出 | 到中断控制器的屏蔽后中断，高=有效匹配 |
+| GPIOINTR | 输出 | GPIOMIS 的合并或（OR）版本 |
+| SCANENABLE / SCANINPCLK / SCANOUTPCLK | — | 扫描测试用 |
+
+### 34.6.3 到 pad 的信号
+
+接芯片 I/O 引脚（pad）的信号，每个 pad 三根线：
+
+|  |  |  |
+| --- | --- | --- |
+| 信号 | 方向 | 说明 |
+| nGPEN[7:0] | 输出 | 输出使能，低有效，由 GPIODIR（软件模式）或辅助引脚（硬件模式）驱动 |
+| GPOUT[7:0] | 输出 | 输出数据，由 GPIODATA（软件模式）或辅助引脚（硬件模式）驱动 |
+| GPIN[7:0] | 输入 | 从 pad 读回的输入数据 |
+
+注意：**GPIN 是异步信号**，读到 GPIODATA 前需要等待**两个 PCLK 上升沿**。
+
+### 34.6.4 一份典型操作的编程清单
+
+**配置引脚为输出并拉高**：
+
+1. 写 GPIODIR：把对应位写 1（输出）；
+
+2. 写 GPIODATA（用带掩码的地址，如 0x3FC 全写）：把对应位写 1（拉高）。
+
+**读取引脚输入**：
+
+1. 写 GPIODIR：对应位写 0（输入）；
+
+2. 读 GPIODATA：对应位读回引脚电平（异步输入需等 2 个 PCLK）。
+
+**配置上升沿中断**：
+
+1. 写 GPIOIS：对应位 0（边沿）；
+
+2. 写 GPIOIBE：对应位 0（单边沿）；
+
+3. 写 GPIOIEV：对应位 1（上升沿）；
+
+4. 写 GPIOIC：对应位写 1（清残留）；
+
+5. 写 GPIOIE：对应位 1（使能）；
+
+6. 中断处理：读 GPIOMIS（或 GPIORIS）确认 → 处理 → 写 GPIOIC 清除。
+
+**切换为硬件控制**：
+
+1. 写 GPIOAFSEL：对应位 1（硬件模式）；
+
+2. 之后该引脚由 nGPAFEN（方向）/GPAFOUT（写）/GPAFIN（读）接管。
+
+### 34.6.5 全书主线
+
+1. **是什么**：GPIO = 通用输入输出，PL061 = APB 从设备 + 8 个可编程引脚（第 1 章）；
+
+2. **什么结构**：5 类寄存器 + 模式控制，软件/硬件双模式（第 2 章）；
+
+3. **怎么传数据**：GPIODATA + 地址掩码 + GPIODIR（第 3 章）；
+
+4. **怎么中断**：7 寄存器触发链（第 4 章）；
+
+5. **怎么配**：完整寄存器布局 + 标识（第 5 章）；
+
+6. **怎么接线**：APB / 片上 / pad 三组信号（第 6 章）。
+
+一句话总结：**GPIO 把「一根根引脚」抽象成「一个个寄存器位」，用 GPIODIR 定方向、GPIODATA 传数据、GPIOAFSEL 切复用、7 个中断寄存器管中断；其中「地址线当掩码」和「逐引脚中断」是 PL061 区别于普通 IO 口的两个招牌设计。**
+
+◆ 记忆要点：全书抓三个核心——**「地址掩码」（GPIODATA 占 256 地址，PADDR[9:2] 当掩码）、「双模式」（GPIOAFSEL 切软件/硬件）、「中断链」（IS→IBE→IEV→IE→RIS/MIS→IC）**。寄存器记「数据/方向/中断×7/模式/标识」；方向 1 出 0 入、复位全输入；标识 PeriphID=0x061（ARM），PCellID=0xB105F00D。任何细节忘了，回到「**方向 → 数据 → 模式 → 中断**」这条线定位。
+
+---
+
+# 35. 芯片寄存器里的状态位，为什么要写1清零？
+
+> 来源：https://mp.weixin.qq.com/s/fFkUrlPusQf6H__IjV79TQ
+> 作者：芯片验证
+> update 2026/09/15 21 : 53
+
+写驱动或者调试外设时，我们经常会在寄存器手册里看到一种字段属性：W1C，Write 1 to Clear。第一次看到这个定义，很容易觉得反直觉。一个状态位已经是1了，为什么还要再写1才能清掉？如果想把它清零，直接写0不是更自然吗？
+
+这个问题很容易让人困惑，但它背后其实是硬件事件和软件处理之间的一种约定。有些偶发漏中断、状态位意外消失的问题，最后会定位到W1C字段使用不当。
+
+W1C不是为了让寄存器写法变复杂，而是为了让软件明确告诉硬件：这个已经发生过的事件，我处理完了，现在可以清掉。DMXAI芯片验证
+
+## 35.1 状态位不是普通变量
+
+我们平时软件开发给变量赋值，一般是需要清零就写0。但芯片寄存器里的状态位不一定是一个普通变量。比如某个外设传输完成后，硬件把done bit置1；收到一帧数据后，硬件把rx\_pending置1；发生错误后，硬件把error bit置1。这个1通常表示“某件事已经发生过”，是硬件把事件记录下来，等软件来处理。
+
+如果这个状态位只是普通RW，软件写0就清掉，看起来也能工作。但同一个寄存器里往往还有其他状态位，硬件也可能在软件读写寄存器的过程中继续更新状态。我们真正需要的不是“把整个寄存器写成某个值”，而是“只清掉我已经处理过的那个事件”。
+
+W1C的意思就是：对这个bit写1表示清除请求，写0表示不动它。这里的1不是要保存进去的新值，更像按下一个清除按钮，而不是给变量赋值。
+
+## 35.2 写1清零，是为了只清该清的状态
+
+假设一个状态寄存器里有两个W1C标志：
+
+```
+bit1 = rx_error
+bit0 = tx_done
+```
+
+某一刻读出来是`0b11`，说明两个事件都发生了。现在我们只处理完了`tx_done`，想清bit0，`rx_error`还没处理，应该继续保留。
+
+如果软件直接写清除掩码：
+
+```
+write 0b01
+```
+
+硬件看到bit0写1，就清掉`tx_done`；看到bit1写0，就保持`rx_error`不变。结果符合预期。
+
+真正危险的是另一种很常见的写法：先读寄存器，再改某一位，最后把整个值写回去。比如代码里写成类似`reg |= TX_DONE`。从软件语义看，我们只是想“操作bit0”；但对W1C寄存器来说，写回去的是`0b11`，硬件会把bit0和bit1都当成清除请求。
+
+所以，对纯W1C状态寄存器，通常应该直接写入需要清除的位掩码，而不是做普通的read-modify-write。具体写法仍要以寄存器spec为准。
+
+W1C字段里，写回寄存器的每一个1，都可能清掉一个尚未处理的状态。问题不在于改了哪一位，而在于最终写入值里哪些bit是1。DMXAI芯片验证
+
+这也是为什么很多芯片手册会提醒，带W1C字段的寄存器要避免普通read-modify-write写法。尤其在中断状态寄存器里，这类错误可能表现成偶发漏中断：事件确实来过，硬件也记录过，但软件在清另一个标志时顺手把它清掉了。
+
+## 35.3 不能把所有寄存器都按一种写法处理
+
+知道W1C以后，也不能反过来认为所有状态寄存器都可以直接写掩码。是否能这样处理，要看整个寄存器的字段属性。有些寄存器是纯W1C状态位，有些会混合RW配置位、RO状态位、reserved bit和W1C字段，也有的平台会提供单独的clear寄存器。
+
+所以我们看寄存器时，不能只看字段名字，还要确认每个字段的访问属性和写入语义。混合多种属性时尤其要按照spec处理，否则一次写操作可能在清除状态的同时，意外改变其他控制位。
+
+## 35.4 硬件又来一个事件怎么办
+
+还有一个更容易被忽略的问题：软件清状态的同时，硬件如果又产生了同一个事件，这个bit最后应该是0还是1？
+
+硬件set和软件clear同时发生时谁优先，没有统一答案，必须由寄存器spec明确规定，并在RTL实现和验证中保持一致，软件写法本身解决不了这个问题。
+
+单个状态位也不能替代事件计数。如果同一个事件连续发生两次，而软件只看到一个pending bit为1，它最多知道“至少发生过一次”。系统如果必须区分每一次事件，就需要计数器、FIFO或者更明确的握手机制。
+
+这也是寄存器设计和验证里很重要的一点：我们要验证的不是“写1以后bit会不会变0”，而是在硬件事件、软件清除、中断响应和异常路径同时存在时，状态位还能不能准确表达系统正在发生什么。
+
+W1C里的“1”不是要写进去的状态，而是一个清除动作；写0表示不影响对应bit。真正危险的是把W1C状态寄存器当成普通变量做read-modify-write，导致尚未处理的pending状态被一起清掉。
+
+---
+
+# 36. Boot Mode是什么？芯片为什么会走错启动路径？
+
+> 来源：https://mp.weixin.qq.com/s/shhBtPxaNJVkpQMc-2_nEQ
+> 作者：芯片验证
+> update 2026/09/15 22 : 04
+
+当Bring-up遇到“上电没日志”时，我们很可能先去看Bootloader、镜像格式或者启动介质。镜像是不是烧错了？eMMC是不是没响应？QSPI Flash是不是没焊好？这些都是问题可能的方向，但还有一个更早的问题经常被忽略：芯片可能根本没有走到我们想要的那条启动路径。
+
+比如镜像明明烧在eMMC里，芯片却被配置成从QSPI启动；拨码开关看起来拨对了，但上电采样时Boot pin电平不是预期；某个eFuse或OTP配置改变了启动优先级。这个时候，后面的镜像再正确，BootROM也没有机会加载它。
+
+Boot Mode通常决定芯片早期启动路径，包括从哪个介质启动、进入哪种下载或恢复模式等；一旦方向选错，问题看起来像“软件没跑”，但真正原因可能是软件根本没有被读取。DMXAI芯片验证
+
+## 36.1 Boot Mode不是软件选项，而是启动方向
+
+Boot Mode不是Linux参数，也不是Bootloader菜单。它发生得更早，通常在POR或reset释放附近被采样，并在硬件启动逻辑或BootROM早期用于决定启动路径。
+
+对复杂SoC来说，芯片上电后不会自动知道系统最后要运行Linux、RTOS还是某个应用。它需要先找到下一阶段镜像。这个镜像可能放在QSPI、SPI NAND、SD、eMMC、NAND，也可能通过UART、USB、JTAG等下载或恢复入口进入调试、加载流程，具体取决于芯片支持的启动方式。
+
+Boot Mode解决的不是“系统最后运行什么”，而是“早期启动逻辑先进入哪条路径”。如果Boot Mode指向了错误介质，后面的Bootloader、固件、设备树、文件系统准备得再完整，也可能暂时没有意义。因为芯片启动链路还没有走到读取这些内容的位置。
+
+## 36.2 Boot Mode通常从哪里来
+
+不同芯片实现会有差异，但Boot Mode常见来源包括Boot Mode pin、strap pin、板上的拨码开关、电阻上下拉、eFuse、OTP、生命周期状态，以及厂商定义的下载或恢复规则。
+
+有些配置来自板级硬件，有些配置来自芯片内部一次性或受限修改的状态。它们并不总是同等优先级。比如某些SoC中，eFuse或安全生命周期状态可能覆盖外部Boot pin；某些下载模式需要特定引脚组合；某些启动模式只在POR阶段采样，普通system reset未必会重新采样。
+
+看Boot Mode时，不能只看“文档上支持哪些启动方式”，还要看当前这颗芯片、当前这块板、当前这次复位，实际会让启动逻辑看到什么状态。DMXAI芯片验证
+
+所以排查Boot Mode时，我们看的不只是一个拨码开关位置。我们要确认的是：复位释放前后，芯片真正采到了哪些启动相关状态；这些状态经过内部优先级和安全规则之后，最终选择了哪条启动路径。
+
+## 36.3 为什么芯片会走错启动路径
+
+最常见的一类问题，是板上开关和逻辑电平被理解反了。拨码开关标着ON，不一定就代表Boot pin被芯片采成1。它到底是上拉、下拉，还是通过开关接到某个固定电平，需要回到原理图和实测波形里确认。
+
+第二类问题是上下拉或复用电路影响了采样。Boot pin后续可能还会作为GPIO、外设信号或调试信号使用，但启动采样发生得更早。如果外部器件在上电阶段还没有进入稳定状态，或者复用电路对电平有影响，芯片采到的Boot Mode就可能和静态检查结果不一致。
+
+第三类问题和reset时序有关。有些Boot Mode只在POR释放附近采样，如果电源、reset、外部器件输出或时钟状态还不稳定，采样窗口里看到的电平可能不是我们预期的稳态电平。稳态电平正确，不代表采样瞬间正确。这也是为什么有些问题按一下reset和完整断电重上电，现象并不完全一样。
+
+还有一类问题来自eFuse、OTP或安全状态。比如芯片可能进入了安全启动路径，某些下载模式被关闭，或者fallback策略和研发阶段假设不同。外部Boot pin看起来没变，但内部配置已经改变了最终路径。
+
+Boot Mode最容易误判的地方在于：我们看到的是板子上的开关和镜像文件，芯片采到的却是复位瞬间的真实电平和内部配置状态。
+
+## 36.4 怎么判断Boot Mode有没有走对
+
+最直接的办法，是看Boot Mode相关引脚在POR或reset释放附近的真实波形，而不是只看开关位置和万用表静态电平。采样发生在某个时间窗口里，静态检查只能回答一部分问题。
+
+接下来可以看启动介质有没有被访问。如果预期从QSPI启动，就应该看到片选、时钟和数据线上的动作；如果预期从SD或eMMC启动，就要看接口初始化是否发生；如果预期进入UART或USB下载模式，也应该有相应握手迹象。
+
+如果JTAG或厂商工具还能访问，可以进一步查看Boot状态寄存器、错误码、启动进度码、fallback状态，或者BootROM停留位置。有些芯片会提供sticky status，把启动失败原因保留下来，这对判断“到底选了哪条路”很关键。
+
+没有访问启动介质，不一定是介质坏了；也可能是BootROM从一开始就没有选择它。
+
+## 36.5 提前留下判断启动路径的证据
+
+Boot Mode问题看起来像板级配置问题，但它不只发生在板子上。对复杂SoC来说，Boot Mode编码、内部优先级、eFuse覆盖关系、安全状态、fallback路径和错误状态，都需要在设计和验证阶段梳理清楚。
+
+比较关键的是三件事：Boot Mode编码要和文档、RTL、BootROM和板级设计一致；POR和system reset下的采样行为要说清楚；空镜像、坏Header、介质访问失败、非法模式时要有可观察状态和最小恢复路径。
+
+FPGA Prototype或Emulation可以提前验证BootROM对不同Boot Mode的选择逻辑、寄存器状态和软件路径，但不能替代真实硅片上的上电采样、电源时序和板级电平确认。真正到Bring-up时，我们仍然要用波形、状态寄存器、介质访问迹象和工具返回信息，把“芯片到底去了哪里”这件事确认下来。
+
+## 36.6 先确认芯片到底去了哪里
+
+当芯片上电后没有日志时，我们不应该只问“Bootloader为什么没跑”，而要先确认Boot Mode有没有被采成预期路径。镜像正确、介质正常、Bootloader代码也没问题，并不代表芯片真的去读了它。
+
+Boot Mode看起来只是几个引脚或几位配置，但它决定的是启动链路第一步的方向。方向错了，后面所有正确的软件准备都可能暂时没有机会发挥作用。
+
+Boot Mode通常决定芯片早期启动路径，包括从哪个介质启动、进入哪种下载或恢复模式等。它连接板级strap、电阻上下拉、eFuse、OTP、安全状态、BootROM和启动介质。一旦启动路径选错，外部看到的可能只是没有日志，但真正的问题可能发生在软件被读取之前。

@@ -92,6 +92,7 @@
 　　　　[3.19.1 普通方法](#3191-普通方法)  
 　　　　[3.19.2 修改配置](#3192-修改配置)  
 　　　　[3.19.3 同步按钮](#3193-同步按钮)  
+[4. fsdb波形分析接口 -- NPI介绍](#4-fsdb波形分析接口-npi介绍)  
 
 <!-- toc-end -->
 
@@ -924,3 +925,31 @@ nSchema 的原始视图直接改 view 只能单次生效，可以在 Preference 
 [2] [Bilibili 【新思小课堂】](https://space.bilibili.com/1833312766/lists/1467161?type=season)
 
 [3] [芯片验证日记 Verdi用法小节](https://mp.weixin.qq.com/s/ddw2Ala_Yf2VU1tNAjBPpA)
+
+---
+
+# 4. fsdb波形分析接口 -- NPI介绍
+
+> 来源：https://mp.weixin.qq.com/s/e74xzGVvzVdArMx271diqg
+> 作者：cpu arch
+> update 2026/08/29 13 : 32
+
+fsdb波形读取和解析主要有以下几种方式：
+
+1. 打开Verdi GUI界面，手动查找信号和分析。
+2. 使用Synopsys的命令行工具（fsdbreport、fsdb2vcd），不需要加载verdi GUI。
+3. 使用Synopsys的NPI接口，不需要加载verdi。
+
+本文主要介绍Synopsys的NPI编程接口，全称为Native Programming Interface，其功能比fsdbreport和fsdb2vcd更加全面和强大，并且不需要加载verdi GUI来手动分析。官方文档和使用参考一般在安装路径下的/verdi/doc/VC\_Apps\_NPI.pdf和/verdi/share/npi/等路径。
+
+NPI接口可以让用户调用实现特定的自动化功能，例如trace driver/load，抓取parameter、port、signal信息等，用户可以通过自动化脚本实现带宽、延迟统计、debug定位、信号trace等功能，极大提高工作效率。
+
+NPI支持C/C++接口和TCL接口，也支持Python。NPI包含了Language model、Netlist Model、Text Model、Power Model、FSDB Model、Coverage Model等模型和功能。并且提供了很多库和函数接口可以直接调用，非常方便。
+
+参考链接里提供了一些使用示例，脚本代码都是开源的，有感兴趣的可以尝试一下。
+
+参考：
+
+[我给AI写了一套"芯片验证SOP"，它真的帮我抓到了bug](https://mp.weixin.qq.com/s?__biz=Mzg4MzU2NTc4Ng==&mid=2247483659&idx=1&sn=e414339b2a20ed79fac544034d77d3c7&scene=21#wechat_redirect)
+
+[xwave：一个让 AI 能直接查波形的命令行工具](https://mp.weixin.qq.com/s?__biz=Mzg4MTc1NzQ2MQ==&mid=2247503809&idx=1&sn=73f1cc7717851bd21e47b1658e79e30b&scene=21#wechat_redirect)

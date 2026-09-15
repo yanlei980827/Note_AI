@@ -18,6 +18,24 @@
 　　[1.8 总结](#18-总结)  
 　　[1.9 疑问与评论](#19-疑问与评论)  
 　　　　[1.9.1 补充](#191-补充)  
+[2. 【朝花夕拾】SystemVerilog：编译器不让赋值，为什么 $cast 却可以？](#2-朝花夕拾systemverilog编译器不让赋值为什么-cast-却可以)  
+[3. SystemVerilog interface：为什么 UVM 需要 virtual interface](#3-systemverilog-interface为什么-uvm-需要-virtual-interface)  
+　　[3.1 先把术语分清](#31-先把术语分清)  
+　　[3.2 interface 先解决什么问题](#32-interface-先解决什么问题)  
+　　[3.3 module、interface 与 virtual interface 的关系](#33-moduleinterface-与-virtual-interface-的关系)  
+　　[3.4 virtual interface 到底“虚”在哪里](#34-virtual-interface-到底虚在哪里)  
+　　[3.5 一个 interface，多个 class](#35-一个-interface多个-class)  
+　　[3.6 vif 与 config\_db 的两层定位](#36-vif-与-config_db-的两层定位)  
+　　[3.7 vif 生命周期与使用时机](#37-vif-生命周期与使用时机)  
+　　[3.8 UVM 中的完整配置链](#38-uvm-中的完整配置链)  
+　　[3.9 driver 为什么需要 virtual interface](#39-driver-为什么需要-virtual-interface)  
+　　[3.10 monitor 为什么也需要 virtual interface](#310-monitor-为什么也需要-virtual-interface)  
+　　[3.11 读懂现象](#311-读懂现象)  
+　　[3.12 DV 检查点](#312-dv-检查点)  
+　　[3.13 真实调试流程](#313-真实调试流程)  
+　　[3.14 面试问答](#314-面试问答)  
+　　[3.15 问题 3：`config_db::get` 成功却 driver 驱动不到 DUT，可能是什么原因？](#315-问题-3config_dbget-成功却-driver-驱动不到-dut可能是什么原因)  
+　　[3.16 小结](#316-小结)  
 
 <!-- toc-end -->
 
@@ -441,3 +459,365 @@ _nonblocking_transport_imp_decl(SFX)
 如果想要在字符串中嵌套宏，可以借助反引号`完成，如下图所示：
 
 ![](SV_AI_assets/image-0001.jpg)
+
+---
+
+# 2. 【朝花夕拾】SystemVerilog：编译器不让赋值，为什么 $cast 却可以？
+
+> 来源：https://mp.weixin.qq.com/s/VX3w7Ice4bPYAvYn3S3e5Q
+> 作者：吉米儿
+> update 2026/09/15 21 : 53
+
+该篇致力于理解，当初入行困惑很久的小问题... 大佬请划走...
+
+读 UVM 代码时，经常会遇到这样的写法：
+
+$cast(req, req\_resp);
+
+`uvm\_send(req)
+
+ 
+
+看起来，它只是让 req 引用 req\_resp 对应的 transaction，再把事务送给 driver。既然如此，为什么不直接写 req = req\_resp;？
+
+常见的解释是：“父类句柄不能直接赋给子类句柄，要用 $cast。”这个回答很容易引出更深一层的疑问：既然编译器不允许，$cast 为什么又可以？它到底检查了什么？
+
+关键在于：句柄的声明类型，与句柄实际指向的对象类型，是两个层面的信息。
+
+本文只讨论普通类句柄之间的 $cast。先从一个最小例子看起：父类描述地址，子类在此基础上增加 burst 长度。
+
+class base\_trans;
+
+    int addr;
+
+endclass
+
+ 
+
+class axi\_trans extends base\_trans;
+
+    int burst\_len;
+
+endclass
+
+ 
+
+声明 base\_trans b;，只是定义了一个父类类型的句柄变量；真正的对象要通过 new 或工厂创建。这个句柄既可以引用 base\_trans 对象，也可以引用从它派生的对象。
+
+接着创建一个 axi\_trans 对象，再用父类句柄引用它。下面的模块与前面的类定义可以放在同一个 SystemVerilog 文件中：
+
+示例代码：父类句柄保存子类对象，再通过 $cast 取得子类句柄
+
+module tb;
+
+    base\_trans b;
+
+    axi\_trans  a1, a2;
+
+ 
+
+    initialbegin
+
+        a1 = new();
+
+        a1.burst\_len = 8;
+
+        b = a1;
+
+ 
+
+        // a2 = b;  // 取消注释后，这一行会编译报错
+
+ 
+
+        if ($cast(a2, b)) begin
+
+            $display("burst\_len=%0d", a2.burst\_len);
+
+        end
+
+    end
+
+endmodule
+
+ 
+
+先停在 b = a1; 这一行。赋值完成后，对象依然是完整的 axi\_trans，burst\_len 仍然存在，值仍然是 8。变化的只是：现在多了一个名叫 b 的句柄引用它。
+
+| 观察对象 | 此时的类型或状态 |
+| --- | --- |
+| 句柄 b 的声明类型 | base\_trans |
+| b 实际指向的对象类型 | axi\_trans |
+| 对象是否丢失 burst\_len | 没有，成员仍然存在 |
+
+ 
+
+通过 b 可以直接访问父类声明的 addr；要直接访问子类新增的 burst\_len，需要取得相应的子类句柄。对象拥有哪些成员，与某种句柄类型允许你直接访问哪些成员，需要分开看。
+
+再看被注释的 a2 = b;。普通赋值根据声明类型检查，右边是 base\_trans，左边是 axi\_trans。父类句柄可能指向不同对象，语言不允许未经运行时检查就把它当作某个具体子类使用。
+
+即使这个简单例子中，前一行已经写了 b = a1，直接赋值仍然受到同一条类型规则约束。编译器不会因此放宽父类句柄到子类句柄的赋值规则。 类句柄赋值规则
+
+所以，这里的编译错误表达的是：仅凭声明类型，不能保证这次直接赋值安全。实际对象是否兼容，仍然有可能在运行时得到确认。
+
+这正是 $cast(a2, b) 发挥作用的地方。它检查 b 当前引用的对象能否由 axi\_trans 类型的句柄接收。对于这里的非空对象，实际类型是 axi\_trans，或是 axi\_trans 的进一步派生类，都可以通过检查。
+
+示例中的对象确实是 axi\_trans，因此 $cast 返回 1，并且已经完成句柄赋值。随后打印的 burst\_len 为 8。
+
+$cast 检查成功时就完成赋值，不需要再补一行 a2 = b。
+
+成功后，a1、b 和 a2 都引用同一个对象。通过 a2 修改 burst\_len，a1 也会看到修改；$cast 没有创建新对象，也没有复制一份 transaction。
+
+不过，这几个句柄变量仍然独立。之后执行 a2 = null，只会清空 a2，a1 和 b 仍然引用原来的对象。句柄赋值不会建立持续同步变化的连接。
+
+为了看到检查真正的作用，可以在同一个 initial 块后面继续加入：
+
+b = new();  // 这次创建的是 base\_trans 对象
+
+ 
+
+if (!$cast(a2, b)) begin
+
+    $display("cast failed");
+
+end
+
+ 
+
+这一次，b 指向的确实是 base\_trans 对象，它没有子类新增的 burst\_len。$cast 返回 0，进入失败分支，a2 保持原值。在这个例子里，a2 仍然引用之前的 axi\_trans 对象。
+
+动态检查能够识别这次不兼容的赋值，却不会给父类对象补出缺失的成员。写了 $cast，也不能保证每一次转换都会成功。
+
+到这里，很容易产生另一个误解：“既然 $cast 做了检查，用它就不会报错了吧？”这还要看它的调用方式。
+
+独立调用：按任务形式使用
+
+$cast(req, req\_resp);
+
+ 
+
+像原始 UVM 代码这样独立调用，类型检查失败时会报告运行时错误。编译通过，只表示这是一种受支持的动态转换写法，实际传入的对象还必须在运行时通过检查。
+
+检查返回值：按函数形式使用
+
+if ($cast(req, req\_resp)) begin
+
+    // 成功：句柄赋值已完成
+
+end
+
+elsebegin
+
+    // 失败：req 保持原值，在这里处理失败
+
+end
+
+ 
+
+放在 if 条件中时，成功返回 1，失败返回 0。失败的转换本身不会自动报告运行时错误；是否调用 $error、uvm\_error 或 uvm\_fatal，由失败分支决定。 任务与函数两种调用形式
+
+| 写法 | 检查依据 | 不兼容时的行为 |
+| --- | --- | --- |
+| 父类句柄直接赋给子类句柄 | 声明类型 | 编译阶段拒绝 |
+| 独立调用 $cast | 运行时的实际对象 | 报告运行时错误 |
+| 在 if 中检查 $cast 返回值 | 运行时的实际对象 | 返回 0，由代码处理 |
+
+ 
+
+以上比较限定为本文讨论的类句柄场景。
+
+处理失败也不能只是打印一句话后继续使用 req。失败时它可能仍然保留上一笔事务的句柄，后续代码必须根据结果选择正确路径。类型检查之外，对象是否可用、事务字段是否有效，仍需由相应代码保证。
+
+这些规则在 UVM 中尤其常见，因为通用接口往往使用父类句柄传递对象。例如，uvm\_object 的 clone() 返回类型就是 uvm\_object。
+
+UVM 1.2 中 clone() 的方法声明
+
+virtual function uvm\_object clone();
+
+ 
+
+假设 axi\_item 派生自 uvm\_sequence\_item，已按 UVM 要求实现创建和复制功能，src 是有效的 axi\_item 对象，那么下面的写法需要区分：
+
+代码片段：在 UVM 的 task/function 中使用，假设 src 已有效创建
+
+axi\_item dst;
+
+ 
+
+// dst = src.clone();  // 返回类型是 uvm\_object，不能直接赋值
+
+ 
+
+if (!$cast(dst, src.clone())) begin
+
+    `uvm\_fatal("CAST", "clone result has an incompatible type")
+
+end
+
+ 
+
+这里，clone() 负责创建并复制对象，$cast 负责检查其返回的对象能否由 dst 接收。新对象来自 clone()，不是 $cast。默认 clone() 调用 create() 和 copy()，具体字段复制还依赖类的复制实现。 UVM：clone、copy 与 do\_copy
+
+回到最开始的 $cast(req, req\_resp);，判断它是否必要，要先找到两个句柄的声明类型。
+
+同一类的句柄之间可以直接赋值；把子类句柄赋给父类句柄也可以直接赋值。这些情况下，如果其余条件相同，成功的 $cast 与直接赋值会得到相同的对象引用关系。
+
+当来源是父类句柄、目标是子类句柄时，才需要进一步追踪来源：它实际保存的是目标子类对象，还是另一个不兼容对象？$cast 就是在代码运行到这一刻时给出答案。
+
+因此，阅读一行 $cast，至少要同时看清三个信息：左边期望什么类型，右边实际从哪里取得对象，以及失败后代码如何继续。把这三点连起来，它在验证环境中的作用就能落到具体事务上。
+
+延伸阅读：
+
+Siemens Verification Horizons，Chris Spear，2021。 Class Variables and $cast
+
+Siemens Verification Horizons，Chris Spear，2021。 Runtime checks with the $cast() method
+
+Accellera UVM 1.2 Class Reference。 uvm\_object：clone / copy / do\_copy
+
+---
+
+# 3. SystemVerilog interface：为什么 UVM 需要 virtual interface
+
+> 来源：https://mp.weixin.qq.com/s/dQu9AUYK6Wr9psNq8kJeZA
+> 作者：芯片验证碎碎念
+> update 2026/09/15 22 : 07
+
+UVM driver 和 monitor 都是 class。class 可以在仿真中由 factory 动态创建，但 DUT 引脚、时钟和接口实例是 elaboration 阶段（[[UVM] Phase 机制详解：为什么组件的生命周期要切成这么多段](https://mp.weixin.qq.com/s?__biz=MzcwOTM2NDg5NA==&mid=2247484005&idx=2&sn=5957ed450f261dd522e3819f0a17ff27&scene=21#wechat_redirect)）确定的静态硬件结构。两类对象生命周期不同，不能靠在 class 内直接例化接口解决连接问题。`virtual interface` 就是 class 保存静态接口实例引用的句柄。
+
+## 3.1 先把术语分清
+
+interface 是把同一协议的信号、时钟块、modport 和协议辅助任务放在一起的静态结构。modport 是接口的方向视图，规定从某个使用者角度哪些信号可读、哪些可写。clocking block 是接口中的时序视图，规定采样与驱动相对时钟沿的位置。virtual interface 是 class 内的句柄，它不创建信号，只引用已经在顶层例化的 interface。
+
+## 3.2 interface 先解决什么问题
+
+![散落信号与接口打包](SV_AI_assets/image-0002.png)
+
+图 1：地址、数据、有效和就绪不再以多组端口重复出现，而是由一个接口实例统一承载。
+
+没有 interface 时，DUT、driver、monitor 和断言模块都要重复声明同一组信号；加一根 sideband 信号时，多个端口列表必须一起修改。interface 把这份连接契约集中起来，模块端口只传一个接口或 modport 视图。
+
+![](SV_AI_assets/image-0003.png)
+
+代码图 1：interface 保存公共信号；DUT 和测试平台通过不同 modport 看到相反方向。
+
+modport 不是额外连线，而是编译期方向约束。driver 使用测试平台的驱动视图，DUT 使用设计视图；若两边都试图驱动同一信号，方向冲突会更早暴露。modport 不解决时序竞争，时序属于 clocking block 的职责。
+
+为什么 class 不能直接“连上信号”
+
+![顶层、DUT 与 class 的连接链](SV_AI_assets/image-0004.png)
+
+图 2：顶层例化 interface，DUT 静态连接该实例；UVM class 通过 virtual interface 句柄引用同一实例。
+
+class 不是 module，不能出现在静态端口连接网络里。driver 需要访问真实信号，但它的实例由 `type_id::create` 在 build\_phase 创建；此时不能重新生成一个接口，也不能在 class 中写死顶层接口名字。正确结构是：顶层创建唯一的 interface 实例；顶层把它接到 DUT；testbench 在 run\_test 前把该实例放进 `uvm_config_db`；agent 的 driver 和 monitor 在 build\_phase 取出同一个 virtual interface 句柄。
+
+## 3.3 module、interface 与 virtual interface 的关系
+
+module 是静态硬件层级节点：DUT、时钟产生器和顶层 testbench 都是 module；它们在 elaboration 阶段确定端口连接。interface 也属于这个静态世界：顶层 module 创建 `bus_if` 实例，DUT module 通过 port/modport 使用它，信号值因此在同一个仿真网络中传播。
+
+UVM 的 driver、monitor、agent 和 env 是 class component，属于动态验证对象世界。它们不能成为 module port，也不能通过层次名可靠地绑定到某一个 DUT 实例。virtual interface 正是两层之间的“引用桥”：module 负责拥有真实 `bus_if`，class 负责保存 `virtual bus_if vif`；vif 指向 module 已创建的那个实例。接口实例不会因为 driver 被 factory 替换而重新生成，driver 也不会因为 DUT 层级改变而需要改信号访问代码。
+
+可以把三者的关系记成一条单向链：module 创建 interface，interface 连接 module 端口，virtual interface 被 class 引用。不能反过来让 class 创建 DUT 连线，也不能让 virtual interface 代替真实 interface。virtual interface 为空时，静态接口可能仍然存在且 DUT 正常运行，只是该 UVM component 没有拿到通向它的引用。
+
+![](SV_AI_assets/image-0005.png)
+
+代码图 2：class 中只有 `virtual` 句柄；它初始为 null，必须由外部赋值。
+
+这里的 null 与普通 class 句柄相同：声明了变量不等于已经指向对象。`vif == null` 时访问 `vif.cb` 会产生运行时空句柄错误。最安全的写法是在 build\_phase 的 `config_db::get` 失败时立即 `uvm_fatal`，不要拖到 driver 的 run\_phase 才发现。
+
+## 3.4 virtual interface 到底“虚”在哪里
+
+`virtual` 不表示接口本身是虚构的，也不表示信号没有真实值。真正的 interface 实例仍由顶层静态例化，里面的时钟、地址、数据和握手信号都是真实仿真网络的一部分。虚的是 class 中保存方式：class 不保存一份接口信号，也不拥有 interface 的生命周期，只保存一个能够指向既有实例的引用。
+
+因此，一个 virtual interface 句柄的赋值不会复制任何信号。两个 monitor 若持有同一个 vif，就会观察同一组波形；一个 driver 和一个 monitor 持有同一个 vif，则 driver 的驱动会出现在 monitor 采样的那组信号上。反过来，两个 vif 指向不同 interface 实例时，即使它们使用相同 class 和相同 config key 名称，也是在操作两条不同总线。
+
+virtual interface 也有类型边界。`virtual bus_if` 只能引用 `bus_if` 类型的实例；若 driver 需要特定 modport 视图，应将句柄声明为对应的 virtual modport 类型或在接口任务中封装访问。类型不匹配属于编译或配置阶段的问题，不应通过强制转换把错误延后到运行时。
+
+## 3.5 一个 interface，多个 class
+
+同一 interface 被 driver、monitor、protocol checker 和 assertion wrapper 共同引用是正常模式。它们不应各自从顶层重新寻找接口；应从同一个 agent\_cfg 取得 vif。cfg 的意义不是为了少写一个变量，而是把“这几个组件属于同一条接口实例”变成明确、可检查的关系。
+
+多个 agent 场景更能体现这一点。顶层可以例化 `bus_if_0` 与 `bus_if_1`；env 为 agent0 和 agent1 建立不同 cfg，并将不同 vif 放入各自配置对象。此时两个 driver 的 class 类型完全相同，却因为 vif 句柄不同而驱动不同实例。若 config\_db set 的范围写成通配所有 agent，两个 driver 可能拿到同一个 vif，典型现象是一条总线被双重驱动，另一条总线始终静止。
+
+## 3.6 vif 与 config\_db 的两层定位
+
+`config_db::get` 成功不等于连接一定正确。get 成功只证明按当前组件路径和 key 找到一个配置对象；还需要确认 cfg 内的 `vif` 非 null，并确认这个 vif 是目标 DUT 已连接的实例。建议在 build\_phase 打印组件完整路径、cfg 名称和 vif 是否为 null；在调试模式下，driver/monitor 可各自打印首次驱动或采样时的接口实例标识。这样能区分“没有取到 cfg”“cfg 没有填 vif”“取到了错误 vif”三类问题。
+
+## 3.7 vif 生命周期与使用时机
+
+interface 在 run\_test 前已经存在，vif 句柄应在 component 的 build\_phase 被取得；driver 和 monitor 的 run\_phase 才开始通过 vif 等待时钟、驱动或采样。不要在 constructor 中依赖 vif，因为 constructor 执行时 config\_db 路径和父组件层级可能尚未完全建立。也不要在 transaction 中保存 vif：transaction 应保存协议事实，接口句柄属于长期 component 的环境资源。
+
+当 reset 发生时，vif 本身通常不会改变，它仍指向同一接口实例；改变的是接口上的信号状态和 driver/monitor 的协议状态。把“reset 后需要清空 pending transaction”与“vif 需要重新赋值”混为一谈，会导致不必要的重新配置。只有环境真正切换到另一实例，或一个 test 建立了新的 agent\_cfg 时，才需要改变 vif 引用。
+
+## 3.8 UVM 中的完整配置链
+
+顶层的 `uvm_config_db::set` 把真实接口实例以某个 key 放入配置数据库。config\_db 是按组件层级路径查找的键值数据库，不是普通全局变量。env 或 agent 将目标范围限定为需要该接口的子树；driver 和 monitor 分别用相同 key 调用 `get`。这样同一个 env 有多个 agent 时，每个 agent 也能取到正确的接口，而不会误连到另一条总线。
+
+![顶层传递 virtual interface](SV_AI_assets/image-0006.png)
+
+代码图 3：静态顶层既连接 DUT，也通过配置链把同一 interface 实例交给 UVM 组件。
+
+真实 UVM 写法通常会把 virtual interface 放进 `agent_cfg`。cfg 是配置对象，除 vif 外还可携带 active/passive 模式、超时参数等。agent 取得 cfg 后，将同一 cfg 交给 driver 和 monitor。这样 interface 的来源只有一个，driver 与 monitor 不会意外观察两条不同总线。
+
+![](SV_AI_assets/image-0007.png)
+
+代码图 4：配置对象同时保存 vif 和 agent 模式；agent 在 build\_phase 对 cfg 与 `cfg.vif` 分别做失败检查。
+
+这种“两级检查”来自真实 UVC 的常用边界。第一层检查 cfg 是否成功取得，定位 set/get 的路径或 key 错误；第二层检查 cfg 中的 vif 是否为 null，定位顶层是否真正把接口实例赋进配置对象。两者不能合并，因为 cfg 存在但 vif 为空与 cfg 根本不存在是不同根因。driver 与 monitor 都从同一个 cfg 取得 vif，避免两个组件使用不同来源的接口句柄。
+
+## 3.9 driver 为什么需要 virtual interface
+
+driver 的职责是把 sequence item 转换为接口上的时序动作。sequence item 是 class transaction，包含地址、数据、方向等字段；driver 通过 vif 的 clocking block 在指定时钟边沿驱动它。clocking block 的 output skew 表示驱动动作相对时钟沿的时间位置，避免与 DUT 在同一沿采样形成竞争。
+
+![clocking block 的采样与驱动时刻](SV_AI_assets/image-0008.png)
+
+图 3：输入在稳定采样点读取，输出在指定驱动点更新，避免同一时钟沿的读写竞争。
+
+![](SV_AI_assets/image-0009.png)
+
+代码图 5：driver 从 sequencer 取得 `bus_item`，等待 `vif.drv_cb`，驱动地址/数据/方向/valid，等待 ready 后撤销 valid，最后调用 `item_done`。
+
+这段代码体现的是完整的 transaction 到引脚转换，而不只是一次赋值。`get_next_item` 从 sequencer 取到已经随机化好的事务；`@(vif.drv_cb)` 把动作对齐到 driver clocking block；valid 保持到 ready 出现，避免在接收方未接收前覆盖字段；`item_done` 释放 sequencer，允许下一笔事务继续。任何一步缺失都会出现不同症状：没有 `get_next_item` 时 driver 永远没有工作；没有等待 ready 时会丢交易；漏掉 `item_done` 时 sequence 卡在第一笔。
+
+这里的 vif 只决定“操作哪一组真实信号”，clocking block 决定“何时操作”。driver 不访问顶层层次名，因此换 DUT 实例、增加第二个 agent、或将同一 driver 用到另一条总线时，只需下发不同 cfg.vif，代码本身不变。实际项目还应在等待 ready 的循环外加入有界计数或 timeout；超过周期阈值时打印 `req.addr`、`req.data`、valid 与 ready 状态，避免无限等待掩盖接口死锁。
+
+## 3.10 monitor 为什么也需要 virtual interface
+
+monitor 不驱动接口，却同样需要 vif 来采样真实信号。monitor 在前图所示的 clocking block 输入采样点读取稳定值，组装成新的 transaction，再经 analysis port 广播给 predictor、scoreboard 和 coverage。driver 与 monitor 使用同一 interface 实例，但通过不同 modport/clocking block 完成不同职责。
+
+## 3.11 读懂现象
+
+![连接成功与失败输出](SV_AI_assets/image-0010.png)
+
+输出图 1：正常场景中 driver 驱动、DUT 响应、monitor 采样的字段一致；vif 未赋值时会在访问点报空句柄。
+
+若 driver 日志显示发送了 transaction，但接口波形不动，先检查 driver 是否拿到正确 vif，以及顶层 interface 是否真的连接到 DUT。若 monitor 采到 x 或偶发旧值，检查它是否绕过 clocking block 直接读取信号。若两个 agent 互相影响，检查 config\_db 的 set 作用域是否过宽。
+
+## 3.12 DV 检查点
+
+建立三个明确检查。第一，driver 和 monitor 在 build\_phase 都确认 vif 非 null，并打印 `get_full_name()`，以便定位哪一个组件取配置失败。第二，对每笔 sequence item 记录 driver 驱动计数与 monitor 观察计数；active 模式下两者应按协议延迟对应。第三，覆盖接口方向：driver 不应驱动 monitor-only 信号，monitor 不应修改接口。这些检查把 virtual interface 问题从波形猜测变成配置、连接和时序三类可验证事实。
+
+## 3.13 真实调试流程
+
+![](SV_AI_assets/image-0011.png)
+
+图 4：先查 vif 是否为空，再查顶层静态连接，再查 config\_db 路径和 clocking block 访问方式。
+
+先在 driver 和 monitor 的 build\_phase 检查 `get` 返回值。若一方失败，比较 set 的上下文、目标路径和 key。若两方都成功但信号不动，查看顶层 interface 与 DUT port 的连接；interface 例化成功不代表其信号已经连到 DUT。若信号在动但采样错，最后才检查 modport 方向和 clocking block。这个顺序能避免把配置问题误判为协议问题。
+
+## 3.14 面试问答
+
+问题 1：为什么 UVM driver 使用 virtual interface，而不是直接引用顶层接口名？
+
+回答：driver 是可复用 class，顶层接口实例是静态层次对象。virtual interface 让 driver 保存由外部注入的实例引用，因此同一 driver 可以用于不同 DUT 实例和多个 agent；写死层次名会破坏复用与多实例能力。
+
+问题 2：interface、modport、clocking block、virtual interface 各自解决什么问题？
+
+回答：interface 打包协议信号；modport 定义使用者的读写方向；clocking block 定义相对时钟沿的采样和驱动时刻；virtual interface 让动态 class 持有静态 interface 实例的引用。四者相关，但不能互相替代。
+
+## 3.15 问题 3：`config_db::get` 成功却 driver 驱动不到 DUT，可能是什么原因？
+
+回答：get 成功只证明 driver 拿到了某个 interface 实例，不证明它正是连接 DUT 的那个实例。应检查顶层 port 连接，以及多 agent 场景中 config\_db 路径是否让 driver 拿错了 interface。
+
+## 3.16 小结
+
+interface 将协议信号、方向和时序规则集中定义；virtual interface 则让 UVM class 能够安全引用那个静态实例。完整链路是顶层例化并连接 interface，config\_db 下发引用，agent 将 cfg 交给 driver 与 monitor，driver 用 clocking block 驱动，monitor 用 clocking block 采样。最常见的错误不是语法，而是 vif 没有注入、注入到错误实例，或绕过 clocking block 造成竞争。
