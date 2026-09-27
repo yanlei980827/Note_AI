@@ -218,6 +218,7 @@
 　　　　[18.7.2 Request 和 Completion 如何配对](#1872-request-和-completion-如何配对)  
 　　[18.8 读波形时，建议始终沿着因果链](#188-读波形时建议始终沿着因果链)  
 　　[18.9 总结](#189-总结)  
+[19. PCIe Host：从 CPU 请求到设备响应](#19-pcie-host从-cpu-请求到设备响应)  
 
 <!-- toc-end -->
 
@@ -5259,3 +5260,92 @@ CplD → 完成事务闭环
 
 - PCI Express Base Specification，Configuration Space、Configuration Request、BAR 与 Completion 相关章节。
 - PCI Express Technology，Configuration Request、Memory Request 与 Completion Header 相关示意图。
+
+---
+
+# 19. PCIe Host：从 CPU 请求到设备响应
+
+> 来源：https://mp.weixin.qq.com/s/qE7-ck9vTej2wfapcrGBoQ
+> 作者：周漾
+> update 2026/09/27 17 : 52
+> **已截图**
+
+Host 是拥有 CPU、系统内存和软件地址空间的一侧。Root Complex 把 Host 访问转换为 PCIe transaction。Endpoint 是 Device 侧功能。它响应 Configuration 或 MMIO request，也可能主动发起 DMA 和 interrupt。Host 不是 UVM 环境。UVM 只是在验证中模拟或观察这条系统路径。
+
+先把系统中的角色分清
+
+CPU 执行软件指令。软件看到的是系统地址空间和 device register。Host Bridge 或 Root Complex 把访问送入 PCIe Fabric。Fabric 可以是一条直接链路，也可以包含 switch。Endpoint 是 Device 侧功能。它拥有 Configuration Space、BAR window、DMA engine 和 interrupt logic。本文把 CPU、memory 和 Root Complex 合称为 Host。Host 发起 Configuration 和 MMIO 访问。它也提供 DMA 的 memory target，并接收 device event。
+
+Root Complex 不只是转发器。它在 Host address space 与 PCIe transaction 之间建立映射。它为 request 分配 Requester ID、Tag 等关联信息。它也把 Completion 路由回正确的 Host requester。Device 发起 memory request、DMA write 或 interrupt message 时，Root Complex 也要接收和转发。PCIe 不是单向模型。谁是 Requester、谁是 Completer，要看当前 transaction 类型。
+
+![](PCIe_AI_assets/image-0129.png)
+
+图 1：CPU/软件经 Root Complex 访问 Device，Device 的 Completion、DMA 和 interrupt 再返回 Host。
+
+一次 Host 访问至少有三个状态。issued 表示软件或 sequence 已发起 request。accepted 表示链路或 Device 已接收 request。completed 表示 read response 或定义的完成条件已经返回。
+
+Requester 与 Completer 是 transaction role，不是固定的器件名称。Host 发起 Configuration Read 或 Memory Read 时，Host/Root Complex 是 Requester，Device 是 Completer。Device 做 DMA Read 时，角色反过来。Device 是 Requester，Host memory 一侧是 Completer。因此 Completion、Tag 和 outstanding 既会出现在 Host read，也会出现在 Device DMA。
+
+Configuration Access、MMIO 与 DMA 的差别
+
+Configuration Access 用于发现和配置 Device。它读取身份、capability 和 BAR，也会写入 enable 等控制字段。MMIO 是软件通过 BAR 映射访问 device register 或 device memory window。DMA 是 Device 主动访问 Host memory。软件通常先用 MMIO 配置 descriptor、地址和长度。随后 Device 发起 PCIe request。三种访问的起点不同，但都需要明确 address、属性、request accepted 和完成语义。
+
+Memory Write 和 Memory Read 不能混为一谈。write 通常是 posted request。Host 不会用 read Completion 的方式等待它。关键是 write 何时被接受，以及何时对 Device 可见。read 是 non-posted request。Host 必须等待带 data/status 的 Completion。driver 已经 drive request，不等于 Device 已执行。Device 已执行，也不等于软件已经观察到最终结果。
+
+![](PCIe_AI_assets/image-0130.png)
+
+图 2：Configuration/MMIO request 从 Host 下行；Completion/Interrupt 从 Device 上行；DMA 时 Device 反向作为 Requester 访问 Host memory。
+
+![](PCIe_AI_assets/image-0131.png)
+
+代码图 1：request 保存 address、data、读写方向和 tag；response 使用同一 tag 返回 data 与 status。
+
+transaction 是验证环境中对一笔协议操作的快照。它不是 PCIe RTL signal 的替代品。addr 表示本次访问的目标。is\_write 区分 read/write。tag 让 response 找回对应 request。真实协议还会有 byte enable、length、attributes 和 error status。示例只保留理解 Host 路径的最小字段。monitor 从 pin-level 或 TLP-level 行为组装 transaction。scoreboard 用 tag 和 address 判断 response 是否回到正确 request。
+
+Host request 的四个完成边界
+
+software issue 表示软件或 sequence 决定发起访问。request accepted 表示 Root Complex、link 或 Device 已接收 request。这里可能受到 ready、credit 或 queue 限制。protocol completion 表示协议完成。对于 read，它通常是 Completion 返回。对于 write，它可能是接口接受或 flush 条件成立。architectural visibility 表示软件读回的状态已经反映此前操作。这四个边界常常不在同一拍。posted write、outstanding read 和 reset 都会拉开它们的时间差。
+
+调试 Host 问题时，要把这些边界拆开看。issued 增长而 accepted 不增长，先查 request path 和 backpressure。accepted 已增长而 read 没有 completion，先查 outstanding 和 response path。completion 已到而软件读到旧状态，先查 ordering、flush、BAR 和 address 配置。只看“测试超时”会把这些问题混在一起。
+
+DV 检查应分别统计 issued、accepted、response，不能只看 driver 是否发出。真实 Host 验证中，地址、完成、reset 和 error 都沿这条基本链路定位。
+
+![](PCIe_AI_assets/image-0132.png)
+
+输出图 1：同一 tag 从 Host issue、Root Complex 接收、Device Completion 到 scoreboard match 逐段出现，最终 pending 清零。
+
+输出中的 tag 是跨层关联的最小证据。Host issue 到 Completion 的时间差可以统计 latency。Completion tag 不在 pending table 中，可能是 reset 前遗留、重复 response 或 route 错误。pending 长期非零，说明这条 Host request 还没有走完整条路径。此时 driver 可能早已完成调用。
+
+Host 侧验证怎样映射到 UVM
+
+UVM 不定义 Host。它把 Host transaction 的产生、驱动、观察和比较拆成组件。sequence 模拟软件或 test scenario，产生 request。driver 把 transaction 交给 Host-side BFM 或 interface。monitor 从 Host/Device 边界观察 request 和 response。predictor 根据配置与 request 生成 expected。scoreboard 用 tag、address、方向和 status 配对。这个映射让系统概念可以被分段检查，但组件划分不会改变协议事实。
+
+sequence 发出 read request 后，driver 可能已经 item\_done。scoreboard 仍会保存 pending，直到 monitor 观察到 matching Completion。test 若只等待 sequence 返回就结束，最后 response 可能被遗漏。scoreboard 若只按到达顺序取 response，多 outstanding 时可能配错。Host 概念图说明系统发生什么。UVM 数据流图说明验证如何观察它。
+
+![](PCIe_AI_assets/image-0133.png)
+
+图 3：先确认 Host request 是否发出，再确认设备接收和 response 返回。
+
+实际调试从系统角色开始比从日志关键字开始更有效。先确定当前 transaction 是 Host request 还是 Device DMA request；再确定谁应返回 Completion；然后检查 address 是否命中预期 BAR/window；最后用 tag/pending 确认返回路径。这样能避免把 Device DMA response 当成 Host MMIO Completion，或把 posted write 的可见性问题误判为 read timeout。
+
+面试问答
+
+问题 1：Host、Root Complex 与 Endpoint 的关系是什么？
+
+回答：Host 是拥有 CPU、memory 和软件地址空间的一侧；Root Complex 是 Host 与 PCIe Fabric 的桥梁，负责将 Host 访问映射为 PCIe transaction 并路由返回结果；Endpoint 是 Device 功能，响应 Host request，也可能主动发起 DMA 或 interrupt。
+
+问题 2：为什么 Host request 要区分 issued、accepted、completed 和 visibility？
+
+回答：它们代表不同边界。issued 是软件发起，accepted 是请求被接收，completed 是协议完成，visibility 是软件可观察到结果。posted write、response backpressure、ordering 和 flush 都会让这些边界分离。
+
+问题 3：Requester/Completer 是否等同于 Host/Device？
+
+回答：不等同。Host 发起 read 时 Host 是 Requester、Device 是 Completer；Device 发起 DMA Read 时 Device 是 Requester、Host memory 一侧是 Completer。角色由 transaction 决定。
+
+小结
+
+后续 BAR、MMIO、Completion、DMA、Ordering 都是在这条 Host—Root Complex—Device—Host 链路上增加具体规则。
+
+实战观察
+
+Host 侧问题常被误认为“设备没有响应”。先区分 request 是否真的离开 Host、是否被设备接受、还是 response 在返回路径丢失。把这三段各自记一个 ID 和时间戳，能避免只凭最终 timeout 猜测根因。

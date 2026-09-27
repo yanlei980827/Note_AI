@@ -93,6 +93,7 @@
 　　　　[3.19.2 修改配置](#3192-修改配置)  
 　　　　[3.19.3 同步按钮](#3193-同步按钮)  
 [4. fsdb波形分析接口 -- NPI介绍](#4-fsdb波形分析接口-npi介绍)  
+[5. 【仿真技巧】如何在后仿波形中查看状态机定义](#5-仿真技巧如何在后仿波形中查看状态机定义)  
 
 <!-- toc-end -->
 
@@ -953,3 +954,64 @@ NPI支持C/C++接口和TCL接口，也支持Python。NPI包含了Language model�
 [我给AI写了一套"芯片验证SOP"，它真的帮我抓到了bug](https://mp.weixin.qq.com/s?__biz=Mzg4MzU2NTc4Ng==&mid=2247483659&idx=1&sn=e414339b2a20ed79fac544034d77d3c7&scene=21#wechat_redirect)
 
 [xwave：一个让 AI 能直接查波形的命令行工具](https://mp.weixin.qq.com/s?__biz=Mzg4MTc1NzQ2MQ==&mid=2247503809&idx=1&sn=73f1cc7717851bd21e47b1658e79e30b&scene=21#wechat_redirect)
+
+---
+
+# 5. 【仿真技巧】如何在后仿波形中查看状态机定义
+
+> 来源：https://mp.weixin.qq.com/s/54N3dNiyuPf9RltJnny34A
+> 作者：验证能量站
+> update 2026/09/27 19 : 00
+> **已截图**
+
+在前仿中，我们可以使用Verdi自带的状态机显示功能在波形中显示状态机定义：
+
+![](VCS_VERDI_AI_assets/image-0037.jpg)
+
+但是也经常会遇到后仿波形中无法显示状态机定义的场景，因为后仿网表（gate-level netlist）中已经没有RTL中定义的enum、状态机变量名，状态机被打散成一堆单bit状态位寄存器，我们只能看到二进制值，而看不到诸如 INIT/IDLE/ACT/SLP 这样的状态定义名称。如此会影响我们的debug效率，本文分享两种方法，用于在后仿波形中查看状态机定义。
+
+方法一：使用 Verdi 的 alias 功能
+
+Verdi中nWave窗口选中信号，点击Waveform -> Signal Value Radix -> Edit Alias 会出现如下的对话框：
+
+![](VCS_VERDI_AI_assets/image-0038.png)
+
+- Alias Table为设置的别名表的名字；
+- 表格中Alias为要显示的字母（填写状态机定义的parameter即可）；
+- 表格中 Value 为对应的数值（填写给 parameter 赋的值即可）；
+- 表格中Background Color为显示的颜色（可填可不填）；
+- 点击最下面的Apply即可将信号不同的值显示为对应的别名；
+- Save as 可以保存当前编辑好的 alias file；
+- Append 可以打开之前保存的 alias file
+
+方法二：enum + $cast + bind
+
+如下图代码所示：
+
+![](VCS_VERDI_AI_assets/image-0039.png)
+
+- 1. 声明和RTL中状态机定义一致的枚举类型
+- 2. 定义一个interface用于debug
+
+  · 先把DUT内部的真实状态寄存器引到接口内的logic变量
+
+  · 再用枚举类型enum声明的\_dbg信号做类型转换
+- 3. 将定义好的interface bind到对应的模块上面
+- 4. 只需要把此文件`include到top\_tb中即可，无需例化和额外处理
+- 5. 这样我们在Verdi中直接查看\_dbg信号就可以看到状态定义
+
+注意：
+
+- 此方法前仿、后仿都可以使用，都属于非入侵式调试手段，例如RTL中对状态寄存器进行了一些特殊处理（如加了ecc编码）导致无法显示状态定义，也可使用此方法辅助；
+- 后端综合后cur\_st等信号可能会被优化、改名、层次变化，要注意assign路径的正确修改；
+- 后端综合更有可能把cur\_st打散成单bit寄存器，可将这些单bit寄存器使用位拼接符拼接起来进行assign，效果是一样的。
+
+![](VCS_VERDI_AI_assets/image-0040.gif)
+
+****---- THE END ----****
+
+**【  如上分享 ~ 敬请交流 】**
+
+关注本公众号👇，获取更多芯片知识
+
+欲渡关山，何惧狂澜，风生水起，正好扬帆

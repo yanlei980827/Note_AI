@@ -297,6 +297,104 @@
 　　[20.15 问题 2：`lock` 与 `grab` 的区别是什么？](#2015-问题-2lock-与-grab-的区别是什么)  
 　　[20.16 问题 3：`is_relevant` 与 priority 如何配合？](#2016-问题-3is_relevant-与-priority-如何配合)  
 　　[20.17 小结](#2017-小结)  
+[21. uvm环境随机复位的方法](#21-uvm环境随机复位的方法)  
+[22. UVM Phase 机制到底怎么运行？](#22-uvm-phase-机制到底怎么运行)  
+　　[22.1 Phase 首先区分为五类角色](#221-phase-首先区分为五类角色)  
+　　[22.2 Phase 机制的核心是一张有向无环图](#222-phase-机制的核心是一张有向无环图)  
+　　[22.3 run\_test 启动的是整套 Phase 图](#223-run_test-启动的是整套-phase-图)  
+　　[22.4 Top-down、Bottom-up 和 Task Phase 的遍历方式不同](#224-top-downbottom-up-和-task-phase-的遍历方式不同)  
+　　[22.5 Run Phase 和 12 个 Runtime Phase 是并行调度关系](#225-run-phase-和-12-个-runtime-phase-是并行调度关系)  
+　　[22.6 Phase 状态跳转和 Objection 共同决定推进](#226-phase-状态跳转和-objection-共同决定推进)  
+　　[22.7 Phase 调试应该按照四层检查](#227-phase-调试应该按照四层检查)  
+　　[22.8 工程上应该优先使用最简单可靠的 Phase 结构](#228-工程上应该优先使用最简单可靠的-phase-结构)  
+[23. UVM Sequence 不是发事务的宏，而是验证场景调度系统](#23-uvm-sequence-不是发事务的宏而是验证场景调度系统)  
+　　[23.1 Sequence 的启动方式决定生命周期](#231-sequence-的启动方式决定生命周期)  
+　　[23.2 Sequence 与 Driver 之间是一套握手机制](#232-sequence-与-driver-之间是一套握手机制)  
+　　[23.3 仲裁机制决定多个 Sequence 如何共享 Driver](#233-仲裁机制决定多个-sequence-如何共享-driver)  
+　　[23.4 Lock 和 Grab 用于独占 Sequencer](#234-lock-和-grab-用于独占-sequencer)  
+　　[23.5 Sequence 有效性用于临时退出仲裁](#235-sequence-有效性用于临时退出仲裁)  
+　　[23.6 嵌套 Sequence 让场景可以分层组合](#236-嵌套-sequence-让场景可以分层组合)  
+　　[23.7 Base Sequence 和 p\_sequencer 提升复用能力](#237-base-sequence-和-p_sequencer-提升复用能力)  
+　　[23.8 Virtual Sequence 负责跨接口调度](#238-virtual-sequence-负责跨接口调度)  
+　　[23.9 Sequence 使用中的常见问题](#239-sequence-使用中的常见问题)  
+[24. \[UVM源代码研究\] 一文讲清楚UVM的phase跳转机制](#24-uvm源代码研究-一文讲清楚uvm的phase跳转机制)  
+　　[24.1 引言](#241-引言)  
+　　[24.2 先补三个前置概念](#242-先补三个前置概念)  
+　　[24.3 phase 是一张有向无环图（DAG）](#243-phase-是一张有向无环图dag)  
+　　[24.4 domain 与 schedule](#244-domain-与-schedule)  
+　　[24.5 phase 有 11 个状态](#245-phase-有-11-个状态)  
+　　[24.6 jump 只在 task phase 里才有意义](#246-jump-只在-task-phase-里才有意义)  
+　　[24.7 jump 到底干了啥：两个标志位而已](#247-jump-到底干了啥两个标志位而已)  
+　　[24.8 set\_jump\_phase：确定跳转方向并落标志](#248-set_jump_phase确定跳转方向并落标志)  
+　　[24.9 end\_prematurely：请求"提前结束"当前 phase](#249-end_prematurely请求提前结束当前-phase)  
+　　[24.10 标志在哪被消费：execute\_phase的三选一](#2410-标志在哪被消费execute_phase的三选一)  
+　　[24.11 jump 的完整生命周期：提前结束后的三步清理](#2411-jump-的完整生命周期提前结束后的三步清理)  
+　　[24.12 end\_phase：识别"提前结束"，走 ENDED](#2412-end_phase识别提前结束走-ended)  
+　　[24.13 cleanup\_phase：进入 JUMPING 态、杀掉进程、清空 objection](#2413-cleanup_phase进入-jumping-态杀掉进程清空-objection)  
+　　[24.14 finish\_phase：前进跳"假装跳过"、清理目标、重新调度](#2414-finish_phase前进跳假装跳过清理目标重新调度)  
+　　[24.15 前进跳 vs 后退跳：一个假装完成，一个原样重跑](#2415-前进跳-vs-后退跳一个假装完成一个原样重跑)  
+　　[24.16 在 sequence 里怎么调 jump：关键是拿到 phase 句柄](#2416-在-sequence-里怎么调-jump关键是拿到-phase-句柄)  
+　　[24.17 starting\_phase 的三个访问入口](#2417-starting_phase-的三个访问入口)  
+　　[24.18 情况 A：default\_sequence（自动拿到 phase）](#2418-情况-adefault_sequence自动拿到-phase)  
+　　[24.19 情况 B：手动 start（必须自己 set phase）](#2419-情况-b手动-start必须自己-set-phase)  
+　　[24.20 "跳回去且无残留"：源码里的四道保险+两个坑](#2420-跳回去且无残留源码里的四道保险两个坑)  
+　　[24.21 坑1：往后跳之前一定要做好保护措施，保证下次再运行到该phase的时候这个跳转代码不会执行，UVM不会帮你保证phase里执行的具体内容，如果不加保护，就会陷入无限死循环来回跳，保护的方法可以参考后面的例子。](#2421-坑1往后跳之前一定要做好保护措施保证下次再运行到该phase的时候这个跳转代码不会执行uvm不会帮你保证phase里执行的具体内容如果不加保护就会陷入无限死循环来回跳保护的方法可以参考后面的例子)  
+　　[24.22 坑2：前进跳会跳过组件代码，第五节的副作用这里再强调一遍：前进跳跳过的 phase，组件代码不执行。如果你依赖"configure 一定会跑"，前进跳过去后配置缺失。**结论：前进跳只用于明确要舍弃的区间。**](#2422-坑2前进跳会跳过组件代码第五节的副作用这里再强调一遍前进跳跳过的-phase组件代码不执行如果你依赖configure-一定会跑前进跳过去后配置缺失结论前进跳只用于明确要舍弃的区间)  
+　　[24.23 注意事项清单（建议收藏）](#2423-注意事项清单建议收藏)  
+　　[24.24 一个能跑的最小例子](#2424-一个能跑的最小例子)  
+　　[24.25 总结](#2425-总结)  
+[25. 边界感非常重要，UVM也是需要的](#25-边界感非常重要uvm也是需要的)  
+[26. UVM RAL 真正的价值，不是简化寄存器读写](#26-uvm-ral-真正的价值不是简化寄存器读写)  
+　　[26.1 RAL 的抽象层次高于普通寄存器访问](#261-ral-的抽象层次高于普通寄存器访问)  
+　　[26.2 RAL 的核心类分别负责什么](#262-ral-的核心类分别负责什么)  
+　　[26.3 集成 RAL 要经过完整流程](#263-集成-ral-要经过完整流程)  
+　　[26.4 Adapter 决定 RAL 能否正确接入总线](#264-adapter-决定-ral-能否正确接入总线)  
+　　[26.5 访问属性必须严格按照规格实现](#265-访问属性必须严格按照规格实现)  
+　　[26.6 前门访问和后备访问不是一回事](#266-前门访问和后备访问不是一回事)  
+　　[26.7 预测机制决定镜像值是否可信](#267-预测机制决定镜像值是否可信)  
+　　[26.8 访问方法要区分“模拟真实行为”和“直接改硬件”](#268-访问方法要区分模拟真实行为和直接改硬件)  
+　　[26.9 Built-in Test 不是跑过就算完成](#269-built-in-test-不是跑过就算完成)  
+　　[26.10 寄存器覆盖率应该反映真实检查](#2610-寄存器覆盖率应该反映真实检查)  
+　　[26.11 RAL 集成的常见问题](#2611-ral-集成的常见问题)  
+[27. UVM 不是一套模板，而是一套验证工程方法](#27-uvm-不是一套模板而是一套验证工程方法)  
+　　[27.1 环境组件在空间上完成职责分工](#271-环境组件在空间上完成职责分工)  
+　　[27.2 UVM 本质上是一套面向对象框架](#272-uvm-本质上是一套面向对象框架)  
+　　[27.3 Factory 机制解决的是可替换和可扩展](#273-factory-机制解决的是可替换和可扩展)  
+　　[27.4 Config\_db 机制解决跨层次配置传递](#274-config_db-机制解决跨层次配置传递)  
+　　[27.5 Phase 机制定义验证环境的时间顺序](#275-phase-机制定义验证环境的时间顺序)  
+　　[27.6 Objection 机制决定仿真什么时候结束](#276-objection-机制决定仿真什么时候结束)  
+　　[27.7 Sequence 机制让测试场景可复用、可组合](#277-sequence-机制让测试场景可复用可组合)  
+　　[27.8 TLM 机制建立事务级通信](#278-tlm-机制建立事务级通信)  
+　　[27.9 RAL 和 Reporting 补齐寄存器与调试能力](#279-ral-和-reporting-补齐寄存器与调试能力)  
+　　[27.10 常见误区是“环境能跑”就等于“平台正确”](#2710-常见误区是环境能跑就等于平台正确)  
+　　[27.11 学习 UVM 的正确路径](#2711-学习-uvm-的正确路径)  
+[28. \[UVM源代码研究\] 聊聊UVM源代码里sequence的启动方法](#28-uvm源代码研究-聊聊uvm源代码里sequence的启动方法)  
+　　[28.1 【UVM源代码研究】·基于IEEE 1800.2-2020（Accellera uvm-2020.3.1）源码](#281-uvm源代码研究基于ieee-18002-2020accellera-uvm-202031源码)  
+　　[28.2 引言](#282-引言)  
+[29. UVM reset：如何安全终止 outstanding transaction](#29-uvm-reset如何安全终止-outstanding-transaction)  
+　　[29.1 一些语义](#291-一些语义)  
+　　[29.2 reset 不是一个动作，而是一组 state transition](#292-reset-不是一个动作而是一组-state-transition)  
+　　[29.3 reset 与 flush/event handler 的关系](#293-reset-与-flushevent-handler-的关系)  
+　　[29.4 reset policy 要在各组件间对齐](#294-reset-policy-要在各组件间对齐)  
+　　[29.5 reset 发生位置决定需要验证什么](#295-reset-发生位置决定需要验证什么)  
+　　[29.6 reset deassert 后不是立刻恢复 traffic](#296-reset-deassert-后不是立刻恢复-traffic)  
+　　[29.7 用 reset epoch 识别迟到 response](#297-用-reset-epoch-识别迟到-response)  
+　　[29.8 读懂 reset 输出](#298-读懂-reset-输出)  
+　　[29.9 DV 检查点](#299-dv-检查点)  
+　　[29.10 排查顺序](#2910-排查顺序)  
+　　[29.11 排查时最容易混淆的点](#2911-排查时最容易混淆的点)  
+　　[29.12 为什么 reset 后还会出现 response ID 不匹配？](#2912-为什么-reset-后还会出现-response-id-不匹配)  
+　　[29.13 reset 时一定要调用 `item_done` 吗？](#2913-reset-时一定要调用-item_done-吗)  
+　　[29.14 为什么 hold flag 要在 reset 中单独处理？](#2914-为什么-hold-flag-要在-reset-中单独处理)  
+　　[29.15 小结](#2915-小结)  
+[30. item_done 到底完成了什么？从 AXI VIP 看懂 UVM 握手机制](#30-item_done-到底完成了什么从-axi-vip-看懂-uvm-握手机制)  
+　　[30.1 从 AXI VIP 的一段代码说起](#301-从-axi-vip-的一段代码说起)  
+　　[30.2 拆开 uvm\_do 找到真正的等待点](#302-拆开-uvm_do-找到真正的等待点)  
+　　[30.3 done 的位置 决定了怎样的发送节奏](#303-done-的位置-决定了怎样的发送节奏)  
+　　[30.4 item\_done 和 put\_response 各管什么](#304-item_done-和-put_response-各管什么)  
+　　[30.5 分离响应以后 靠什么找回原请求](#305-分离响应以后-靠什么找回原请求)  
+　　[30.6 几个最容易踩的坑](#306-几个最容易踩的坑)  
+　　[30.7 回到最开始的问题](#307-回到最开始的问题)  
 
 <!-- toc-end -->
 
@@ -5166,3 +5264,1780 @@ virtual sequencer 不会自动解决物理通道仲裁。每个子 sequencer 仍
 ## 20.17 小结
 
 sequencer 仲裁把多个 sequence 的发送请求收束到一个 driver。`start_item` 的等待可能来自 grant、relevance、lock 或 priority，不等于接口握手失败。用 relevance、grant、issued、accepted 和 lock owner 分层观察，才能把“卡在 start\_item”定位到真正的等待边。
+
+---
+
+# 21. uvm环境随机复位的方法
+
+> 来源：https://mp.weixin.qq.com/s/O5O6PibVA3rXvKFlY-GbSA
+> 作者：追乐人
+> update 2026/09/27 17 : 55
+
+在UVM验证环境中，实现随机二次复位（动态复位）是一项极具挑战性的任务。如果处理不当，极易导致仿真挂死（TB hang）、Scoreboard误报或Driver报错。一个健壮的二次复位环境通常需要从**复位信号生成**、**激励与序列控制**、**组件状态清理**以及**断言管理**四个维度进行系统性实现。
+
+通常有2种方式来实现二次复位，第一种是通过phase的jump到reset phase。另一种是reset agent的形式在main\_phase控制复位信号。
+
+对比：
+
+![](UVM_AI_assets/image-0161.png)
+
+1、phase 跳转
+
+**Phase跳转机制**：在 `main_phase` 中监测复位信号，通过 `phase.jump(uvm_reset_phase::get())` 强制整个测试平台回退到复位阶段。在scoreboard、rfm、monitor、drv的reset-phase里复位静态变量或全局变量。在sequencer里面排空seq。
+
+场景一：vseq 如果是使用 cfg：：db 机制中的defualt\_phase 启动的话， 会自动把phase变量传递给到vseq.starting\_phase;
+
+那这个事情就很简单直接调用即可：
+
+如图所示：
+
+![](UVM_AI_assets/image-0162.png)
+
+而跳到reset\_phase 之后，又会跳到main\_phase ，main-phase 再次启动body 就会造成死循环 ； 这里可以使用一个count 作为复位的计数器， 而count需要使用静态变量， 因为在main-phase 中vseq会被重新实例化， 导致count一直是0  ；
+
+场景二：
+
+如果是使用vseq.start(xxxx\_sevqr) 的方式启动的话， 那uvm就不会默认的给你配置starting\_phase , 这时候你就需要自己在tc中传递该参数；
+
+如图：
+
+![](UVM_AI_assets/image-0163.png)
+
+后续就如场景1 中可以在vseq 调用staring\_phase 了；
+
+2、agent形式+UVM事件
+
+    在 `run_phase`（或 `main_phase`）中通过 Reset Agent 驱动复位信号，这属于**动态复位**。由于此时整个测试平台已经越过了 `reset_phase`，UVM 的默认调度器**不会**自动再带大家走一遍复位流程。因此，Scoreboard、Monitor 等组件的“复位”不能依赖 UVM 的阶段跳转，而是必须通过**软件层面的状态感知与主动清理**来实现。当 Reset Agent 在 `run_phase` 中拉低复位信号时，应该立即触发一个全局的 UVM 事件（例如 `global_reset_ev`）。其他所有组件通过 `wait_ptrigger()` 来监听这个事件，从而同步执行清理动作。这种方式比直接监听硬件信号更解耦，且能避免时序竞态。Reset Agent 在 `run_phase` 触发复位时，**必须同时调用业务 Sequencer 的 `stop_sequences()`**杀掉正在发送数据的 Sequence。
+
+```
+task my_scoreboard::run_phase(uvm_phase phase);
+  forever begin    fork      // 分支1：正常的比对任务      begin        compare_data();       end      // 分支2：监听复位事件      begin        global_reset_ev.wait_ptrigger(); // 等待复位事件        reset_action();                  // 执行清理      end    join_any    disable fork; // 任何一个分支执行（如发生复位），立即杀掉另一个分支，重新进入循环  endendtasktask my_scoreboard::reset_action();  `uvm_info("SCB", "Dynamic Reset: Clearing queues...", UVM_MEDIUM)  expected_queue.delete();  actual_queue.delete();  // 可选：等待复位释放后再恢复比对  // wait(vif.rst_n === 1'b1); endtask
+```
+
+---
+
+# 22. UVM Phase 机制到底怎么运行？
+
+> 来源：https://mp.weixin.qq.com/s/D7HJ2ukqtC4a5mG4VwJXbA
+> 作者：枫
+> update 2026/09/27 18 : 26
+
+很多验证工程师学习 UVM Phase，只记住一串顺序：Build、Connect、Run、Extract、Check、Report。能正确重载几个 Phase 函数，就认为已经理解 Phase 机制。
+
+但当项目中出现自定义 Phase、Phase Jump、Reset 测试，或者 Build 和 Connect 顺序异常时，仅靠记忆顺序很难解释问题。
+
+UVM Phase 并不是一张简单的线性清单，而是一套由节点、顺序、组件树和状态跳转组成的调度机制。理解它，需要从执行结果走向内部结构。
+
+## 22.1 Phase 首先区分为五类角色
+
+在 UVM 中，Phase 相关对象可以按职责分为几类。
+
+UVM\_PHASE\_IMP 是具体 Phase 实现类，例如 Build、Connect、Main 等。它定义这一阶段究竟要执行什么，对应 Exec\_func 或 Exec\_task。
+
+UVM\_PHASE\_DOMAIN 表示一个 Phase 域，可以看作一张由节点组成的有向无环图。环境组件属于某个域后，就按照该域的图执行 Phase。
+
+UVM\_PHASE\_SCHEDULE 表示一个阶段子图，包含节点以及节点之间的连接关系。它必须依附在某个 Domain 中，不能独立存在。
+
+UVM\_PHASE\_NODE 是图中的节点，节点本身不执行具体业务，而是通过内部引用指向某个 Phase 实现对象。
+
+UVM\_PHASE\_TERMINAL 表示域的终点节点，用来确定一个 Domain 或 Schedule 的作用范围。
+
+这些名称容易混在一起，但可以用一个简单原则区分：实现类回答“做什么”，节点回答“在图中哪个位置”，Domain 回答“这张图属于谁”。
+
+理解了角色区分，才能理解为什么同一个 Main Phase 可以被不同调度结构引用，而执行顺序仍然由域和图决定。
+
+## 22.2 Phase 机制的核心是一张有向无环图
+
+UVM 并不是用一个大数组保存 Phase，然后从上到下依次调用。
+
+每个 Phase Domain 维护一个图结构。节点通过连接关系表达先后顺序，方向表示执行依赖。因为不能让 Phase 循环回到已经完成的上游阶段，所以它必须是有向无环图。
+
+Common Domain 是默认的全局 Phase 域。Build、Connect、End of Elaboration、Start of Simulation 等公共阶段，会被组织到这张默认图中。
+
+运行阶段的 12 个 Runtime Phase 则组成一个独立的 Schedule，再通过 Add 操作挂接到 Common Domain 中。
+
+这也是 Run Phase 和 Runtime Phase 能够并行存在的原因：它们不是简单排成一条直线，而是作为图的不同结构被统一调度。
+
+自定义 Phase 的难点也在这里。真正需要定义的不只是新的 Phase 名称，还要在图中确定它连接在哪个节点前后，以及属于哪张调度图。
+
+Phase 执行问题本质上是图结构问题，不是函数名排序问题。
+
+## 22.3 run\_test 启动的是整套 Phase 图
+
+仿真开始时，UVM 会通过 Phase 调度入口创建默认 Phase 节点，构建 Common Domain，并把运行阶段 Schedule 加入其中。
+
+随后，调度进程按照图结构推进 Phase 状态，逐个节点执行。每个节点引用自己的 Phase 实现对象。
+
+当节点开始执行时，Phase 通过 Traverse 遍历 UVM Component 树，找到用户重载的 Build、Connect 或 Main 方法。
+
+Function Phase 调用 Exec\_func，Task Phase 调用 Exec\_task。用户只需在 Component 中重载对应方法，不需要自己管理整棵组件树的调用顺序。
+
+Traverse 决定了组件树在每一层如何执行，Phase 图决定不同阶段之间如何衔接。两者结合，才形成完整的执行调度。
+
+调试 Phase 问题时，既可以看阶段之间的顺序，也可以看组件树内部的遍历路径。
+
+如果只知道 Phase 名称，却不知道 Traverse 和 Domain，就很难解释“同一阶段为什么先执行某个组件，后执行另一个组件”。
+
+## 22.4 Top-down、Bottom-up 和 Task Phase 的遍历方式不同
+
+UVM Phase 类大致可以分为 Top-down、Bottom-up 和 Task 三类。
+
+Build Phase 采用 Top-down 方式。父组件先创建子组件，再进入子节点的 Build。这样才能保证组件树从上到下逐层形成。
+
+Connect Phase 采用 Bottom-up 方式。子组件先完成连接，再回到父组件连接环境级关系。这样底层接口和端口先准备好，上层连接才能成立。
+
+Final Phase 也是 Top-down，适合做最终检查和资源释放。
+
+Task Phase 的遍历方式与 Function Phase 不同。多个组件的运行任务会在同一时间维度并行执行，而不是简单地按组件树从上到下串行调用。
+
+同一层次组件的 Function Phase 通常按名称顺序递归执行，但不同层级之间遵循深度优先遍历。这个细节解释了为什么两个平级组件的 Build 顺序可能和代码书写顺序不同。
+
+依赖组件创建顺序或连接顺序的代码，不能假设“声明在前就一定先执行”。应该通过层次关系和 Phase 语义表达依赖，而不是依赖偶然顺序。
+
+## 22.5 Run Phase 和 12 个 Runtime Phase 是并行调度关系
+
+UVM 的 Runtime Phase 包括：
+
+· Pre-reset、Reset、Post-reset；
+
+· Pre-configure、Configure、Post-configure；
+
+· Pre-main、Main、Post-main；
+
+· Pre-shutdown、Shutdown、Post-shutdown。
+
+这些阶段表达了复位、配置、主运行和关闭之间的逻辑顺序，适合复杂 SoC 或需要明确阶段语义的验证环境。
+
+Run Phase 与 12 个 Runtime Phase 并行运行。Run Phase 通常会等待 Runtime Phase 全部结束后，才进入 Extract 等后续阶段。
+
+这意味着，如果只在 Run Phase 中 Raise Objection，而 Runtime Phase 的 Sequence 已经结束，仿真仍可能继续等待 Run Phase。
+
+反之，如果错误地释放了 Run Phase 的 Objection，也可能让整个运行阶段提前结束。
+
+选择 Run Phase 还是 Runtime Phase，取决于环境需要的语义。简单模块可以只使用 Run Phase；复杂环境更适合用 Reset、Configure、Main 等阶段组织场景。
+
+不建议两套机制混用却没有统一约定。团队必须明确哪个阶段启动 Sequence、哪些组件管理 Objection、由谁控制结束。
+
+## 22.6 Phase 状态跳转和 Objection 共同决定推进
+
+Phase 节点不是执行完函数就立刻进入下一个节点。它会经历开始、执行、等待 Objection、结束等状态。
+
+在执行 Task Phase 时，Objection 是决定 Phase 何时结束的关键。只要还有组件 Raise，Phase 就会停留在当前状态；所有 Objection 释放后，阶段才继续向前。
+
+Objection 机制把组件、Sequence 和 Phase 连接起来。它既是同步手段，也是仿真生命周期控制手段。
+
+Objection 过多会导致仿真无法结束，过少会导致事务还没完成就进入下一阶段。调试时应该记录谁 Raise、谁 Drop，以及每个 Objection 对应的任务生命周期。
+
+如果项目使用 Phase Jump 进行复位测试，还要明确跳转前后的 Objection 状态。跳转不是简单修改阶段名称，它会影响当前 Phase 的执行、等待和清理。
+
+因此，Phase Jump 适合有明确测试控制逻辑的场景，不能作为逃避 Objection 调试的手段。
+
+七、Phase Jump 适合复位测试，但不能随意使用
+
+Phase Jump 允许测试在运行过程中跳转到指定阶段，常见用途是复位测试或多阶段场景控制。
+
+例如，在 Main Phase 中触发复位后，希望重新执行 Reset 和 Configure，而不是重新启动整个仿真。此时可以设计明确的跳转路径和控制条件。
+
+但 Phase Jump 会打断正常阶段推进，涉及当前任务的结束、Objection 的处理和组件状态恢复。
+
+如果跳转时 Sequence 仍在运行，可能残留后台进程；如果 Objection 没有清理，新阶段可能无法正常结束；如果组件内部状态没有复位，跳转后可能继续使用旧配置。
+
+因此，Phase Jump 必须与复位 Sequence、Objection 管理和组件清理逻辑一起设计。它是一项受控机制，不是快速绕过 Phase 顺序的方法。
+
+验证环境应该记录跳转前后的阶段、Objection 状态和关键组件状态，便于确认跳转后确实是“重新开始”，而不是“带着旧状态继续运行”。
+
+八、自定义 Phase 要先定义图，再定义代码
+
+有时项目需要增加新的验证阶段，例如特定功耗流程、系统启动流程或后处理阶段。
+
+添加自定义 Phase 时，不能只创建一个新类并重载方法，还要把它连接到正确的 Domain 和 Schedule 中。
+
+需要明确它依赖哪些已有阶段，应该在 Run Phase 之前、之中还是之后执行，是否和 Runtime Phase 并行，以及谁负责 Raise Objection。
+
+新 Phase 的 Traverse 顺序也必须符合组件树结构。如果自定义 Phase 需要访问子组件，就必须确保子组件已经创建；如果需要做环境级连接，就要符合 Connect 的 Bottom-up 规则。
+
+自定义 Phase 最大的风险不是代码无法编译，而是阶段顺序错误导致仿真偶尔通过。一个依赖组件尚未创建的 Phase，在部分测试中可能看似正常，换一个层次结构就立即失败。
+
+Phase 扩展应该先画图、再编码。图结构清楚了，组件遍历和 Objection 生命周期才有依据。
+
+## 22.7 Phase 调试应该按照四层检查
+
+第一层检查 Phase 是否执行。确认 run\_test 已启动，组件是否加入 UVM 树，目标 Phase 是否进入。
+
+第二层检查组件遍历顺序。Build 是否完成子组件创建，Connect 是否在正确的组件层次完成，平级组件之间是否存在隐含顺序依赖。
+
+第三层检查 Task Phase 和 Objection。确认谁 Raise、谁 Drop，Runtime Phase 与 Run Phase 是否并发，仿真结束是否由正确组件触发。
+
+第四层检查 Phase Jump 和重新进入。确认跳转后旧任务是否结束，组件状态是否清理，新的 Objection 是否正常管理。
+
+这四层可以快速判断问题属于组件树、阶段图、Objection 还是自定义调度。
+
+如果只打印 Phase 名称，往往只能看到阶段进入了或没进入，无法解释为什么组件没有执行、为什么仿真提前结束或为什么跳转后行为异常。
+
+## 22.8 工程上应该优先使用最简单可靠的 Phase 结构
+
+Phase 机制很灵活，但工程环境不应该为了展示能力而堆满自定义阶段。
+
+小型模块通常只需要 Build、Connect、Run、Check 和 Report。复杂 SoC 可以使用 Reset、Configure、Main 等 Runtime Phase，让验证流程更清晰。
+
+只有当项目确实存在阶段语义差异时，才引入自定义 Domain 和 Schedule。
+
+Phase 设计应遵循三个原则：组件依赖由层次结构表达，阶段依赖由图结构表达，仿真生命周期由 Objection 表达。
+
+不要让组件根据全局变量猜测自己应该处于哪个阶段，也不要让一个 Phase 同时负责创建、连接、激励和结果检查。
+
+职责越清晰，Phase 越容易调试；结构越复杂，越需要日志、阶段状态和 Objection 记录来证明执行路径。
+
+结语
+
+UVM Phase 的难点不是记住名称，而是理解一套调度系统如何工作。
+
+具体实现类决定每个阶段做什么，节点决定阶段在图中的位置，Domain 和 Schedule 组织执行图，Traverse 负责遍历组件树，Objection 决定任务阶段何时结束。
+
+Top-down 与 Bottom-up 决定了不同 Function Phase 的组件执行方式，Task Phase 则让多个运行任务并行推进。
+
+真正可靠的 Phase 设计，应该让组件创建、连接、运行和结束之间的关系清晰可解释。能说出阶段名称只是入门，能看懂这张执行图，并能解释仿真为什么这样推进，才算真正掌握 UVM Phase。
+
+---
+
+# 23. UVM Sequence 不是发事务的宏，而是验证场景调度系统
+
+> 来源：https://mp.weixin.qq.com/s/h4qAj0UXHqYRYcbd-n5M6Q
+> 作者：枫
+> update 2026/09/27 18 : 33
+
+很多验证工程师学习 UVM Sequence，会把它等同于 uvm\_do 系列宏。知道怎样创建 Transaction、怎样调用 start\_item 和 finish\_item，就认为已经掌握 Sequence。
+
+但在实际项目中，Sequence 真正承担的职责远不止发送事务。它决定测试场景怎样组织、多个激励流怎样仲裁、不同接口怎样同步、异常场景怎样复用，以及仿真什么时候结束。
+
+如果只把 Sequence 当作事务生成器，环境一旦出现多个 Sequence 并行、双接口交互或复杂中断场景，就会难以控制和调试。
+
+Sequence 的价值，是让验证场景从 Driver 中分离出来，并成为可复用、可组合、可调度的工程对象。
+
+一、Driver 负责信号，Sequence 负责场景
+
+早期 Testbench 常常把激励直接写在 Driver 中。简单模块可以工作，但测试场景和接口驱动被绑在一起，场景无法复用，Driver 也越来越臃肿。
+
+UVM 把这两件事分开。Driver 只负责把 Transaction 转换成接口时序，Sequence 负责产生事务、定义顺序、设置约束和组织场景。
+
+Transaction 描述“发什么”，Sequence 决定“什么时候发、发多少、按什么顺序发、遇到异常怎么办”。
+
+同一个 Driver 可以接受不同 Sequence，从而支持冒烟测试、随机测试、场景测试和压力测试。环境结构不需要变化，测试行为通过 Sequence 切换。
+
+这种分离是 UVM 复用能力的基础。没有 Sequence，Test 之间的差异最终会演变成大量条件分支或重复 Driver。
+
+## 23.1 Sequence 的启动方式决定生命周期
+
+Sequence 可以通过 start 方法直接启动，也可以作为某个 Sequencer 在运行阶段的 default\_sequence 启动。
+
+直接启动适合在 Test 或高层 Sequence 中调用，启动时必须明确目标 Sequencer。default\_sequence 则适合把固定场景绑定到 Sequencer 的动态运行阶段。
+
+Sequence 启动后会执行 body 任务，同时按照配置调用 pre\_body 和 post\_body。Body 负责主要事务流程，前置和后置钩子用于准备和清理。
+
+这两种启动方式对 starting\_phase 的影响不同。只有通过动态 Phase 启动的 Sequence，starting\_phase 才会被自动设置。
+
+Objection 管理也与启动方式有关。手工启动时，Sequence 需要根据场景决定是否自行 Raise 和 Drop；作为 default\_sequence 使用时，可以结合自动 Objection 机制。
+
+如果 Sequence 已经发完事务，但仿真没有结束，应该检查 Objection 是否没有释放；如果仿真提前结束，则要检查 Sequence 是否真正启动、事务是否发完。
+
+Sequence 的生命周期不仅包括创建和启动，还包括等待 Driver 获取、事务执行完成以及结束后的清理。
+
+## 23.2 Sequence 与 Driver 之间是一套握手机制
+
+Sequence 和 Driver 不是简单函数调用，而是通过 Sequencer 进行握手。
+
+start\_item 请求 Sequencer 获得发送事务的权限，finish\_item 在 Driver 完成事务后返回。对于需要随机化的事务，通常会在 start\_item 和 finish\_item 之间完成约束随机。
+
+Sequencer 负责仲裁哪个 Sequence 可以发送下一个事务，并把事务交给 Driver。Driver 通过 get\_next\_item 或类似接口获取数据，完成后通知请求结束。
+
+如果 Sequence 卡在 start\_item，可能是 Sequencer 正在服务更高优先级或 Lock 状态的 Sequence。如果 finish\_item 长时间不返回，则要检查 Driver 是否正确完成握手。
+
+理解这套机制以后，就能区分“事务没有生成”“事务生成了但没有获得发送权限”“事务发送了但 Driver 没有完成”这三类问题。
+
+很多看似 Sequence 失效的问题，实际发生在 Sequencer 仲裁或 Driver 响应阶段。
+
+## 23.3 仲裁机制决定多个 Sequence 如何共享 Driver
+
+当一个 Sequencer 上同时运行多个 Sequence 时，谁先发送事务由仲裁算法决定。
+
+默认 FIFO 严格按进入队列的顺序选择，不看优先级。加权仲裁按权重随机选择，适合希望不同 Sequence 获得不同发送概率的场景。
+
+随机仲裁完全不考虑顺序和优先级，适合压力测试，但可预测性较差。
+
+严格 FIFO 先比较 Sequence 优先级，优先级相同时再按进入顺序选择。严格随机同样先比较优先级，在同一最高优先级之间随机选择。
+
+用户自定义仲裁适合项目有特殊调度规则的情况，但实现前必须明确可验证性和可解释性。
+
+Sequence 优先级与 Transaction 优先级都可能影响调度。使用 uvm\_do\_pri 或 uvm\_do\_pri\_with 可以给事务设置优先级，Sequence 启动时也可以指定自己的优先级。
+
+优先级并不是越高越好。如果高优先级 Sequence 长时间持续发送，低优先级场景可能永远得不到执行，覆盖率也会长期停滞。
+
+仲裁策略应该服务于验证目标，而不是简单选择“最高优先级”。
+
+## 23.4 Lock 和 Grab 用于独占 Sequencer
+
+有些场景必须连续发送多个事务，中间不能插入其他 Sequence，否则协议行为或数据流会被打断。
+
+Lock 可以让当前 Sequence 在锁定期间独占 Sequencer，完成连续事务后再 Unlock。Grab 也能获得独占权，但它的请求会优先插入仲裁队列。
+
+Lock 和 Grab 都会影响其他 Sequence 的执行。如果忘记释放，整个 Sequencer 可能挂住；如果使用范围过大，其他测试场景可能长期得不到调度。
+
+因此，只有在协议或场景明确要求连续操作时才使用独占机制，并保证异常路径也能释放。
+
+独占机制的目标不是压制其他 Sequence，而是保证一组事务的原子性。使用时必须同时设计超时、异常和清理逻辑。
+
+## 23.5 Sequence 有效性用于临时退出仲裁
+
+有些 Sequence 在特定条件下不应该继续参与调度。例如等待某个状态、等待配置完成或等待中断到来。
+
+UVM 通过 is\_relevant 判断 Sequence 当前是否有效。重载该函数并返回无效时，Sequence 会暂时不参与仲裁。
+
+当所有 Sequence 都无效时，Sequencer 会调用 wait\_for\_relevant 等待某个 Sequence 重新有效。
+
+这两个函数通常需要成对重载。如果只改变有效性，却不提供恢复条件，Sequencer 可能进入无事可做的等待状态。
+
+有效性机制适合处理“暂时不能发”的场景，但不能替代正常的条件判断和 Sequence 同步。
+
+如果 Sequence 无条件依赖外部事件，恢复条件必须在代码中明确表达，否则调试时会表现为 Sequencer 没有事务、仿真提前结束或长时间阻塞。
+
+七、uvm\_do 宏只是常用封装，不是 Sequence 的全部
+
+uvm\_do、uvm\_do\_with、uvm\_do\_pri 等宏把创建、随机化和发送事务组合起来，适合快速编写常见 Sequence。
+
+uvm\_do\_on 系列可以显式指定 Sequencer，适合 Virtual Sequence 或需要跨接口发送的场景。
+
+uvm\_create 和 uvm\_send 将实例化与发送分开，便于先构造对象、再决定何时发送。uvm\_rand\_send 会在发送前完成随机化。
+
+如果 Transaction 占用内存较大，希望在多次发送之间复用同一对象，分离创建和发送更有优势。
+
+start\_item 和 finish\_item 则提供更底层的发送方式，适合需要精确控制随机化和扩展点的 Sequence。
+
+宏简化了常见代码，但不会替代对握手和仲裁机制的理解。看到宏能运行，不代表 Sequence 的生命周期和对象复用方式就是正确的。
+
+调试 Object 复用问题时，必须区分哪些字段应该在每次发送前重新随机化，哪些字段需要保持上一次状态。
+
+## 23.6 嵌套 Sequence 让场景可以分层组合
+
+一个 Sequence 可以启动另一个 Sequence，这就是嵌套 Sequence。
+
+底层 Sequence 负责产生一组基础事务，上层 Sequence 负责组合多个底层场景。这样可以形成“基础事务、功能场景、系统场景”的层级结构。
+
+嵌套 Sequence 的 Transaction 类型必须与目标 Sequencer 兼容。一个 Sequencer 只能接受一种基础 Transaction 类型或其派生类型。
+
+当多个不同事务需要进入同一 Sequencer 时，可以把 Sequencer 和 Driver 接受的数据类型提升为 uvm\_sequence\_item，但 Driver 使用具体字段前必须进行类型转换。
+
+类型检查不是形式限制，而是防止错误 Sequence 被启动到错误接口。越早发现类型不匹配，越容易定位问题。
+
+## 23.7 Base Sequence 和 p\_sequencer 提升复用能力
+
+项目中很多 Sequence 会共享公共任务，例如等待复位、配置寄存器、构造包头或检查响应。
+
+这些公共逻辑适合放在 Base Sequence 中，再由具体场景派生。派生 Sequence 只关注自己的事务组合和约束。
+
+当 Sequence 需要访问 Sequencer 中的配置或接口句柄时，可以使用 p\_sequencer 机制。声明 p\_sequencer 后，UVM 会把 m\_sequencer 转换成指定类型的 Sequencer。
+
+这样，Sequence 就可以读取 Sequencer 中保存的地址、模式或接口配置，而不需要写复杂的层次路径。
+
+但 p\_sequencer 也意味着 Sequence 与特定 Sequencer 类型建立依赖关系。基础 Sequence 不应随意依赖项目特有字段，否则复用范围会被限制。
+
+公共逻辑应该通过清晰接口暴露，而不是让每个 Sequence 都直接访问环境内部变量。
+
+## 23.8 Virtual Sequence 负责跨接口调度
+
+当 DUT 有多个输入输出接口时，每个 Agent 都有自己的 Sequencer。单个接口的 Sequence 只能控制对应接口，无法单独完成跨接口场景。
+
+Virtual Sequence 不直接发送 Transaction，它负责控制多个真实 Sequence，统一安排不同接口的动作顺序。
+
+Virtual Sequencer 则保存各个真实 Sequencer 的句柄，供 Virtual Sequence 访问。
+
+例如，先通过配置接口写入工作模式，再通过数据接口发送事务，最后等待中断并读取状态，这种场景就需要 Virtual Sequence 协调。
+
+跨接口同步也可以通过全局事件实现，但当接口数量和场景复杂度增加时，事件会迅速失控。Virtual Sequence 提供更统一、更易读的调度方式。
+
+只有顶层 Virtual Sequence 通常负责 Objection 管理，因为它掌握整个场景的生命周期。底层 Sequence 只负责局部事务，不应随意决定整个仿真什么时候结束。
+
+## 23.9 Sequence 使用中的常见问题
+
+第一，Sequence 没有启动。可能是 default\_sequence 路径错误、直接启动时 Sequencer 句柄为空，或者启动发生在错误的 Phase。
+
+第二，Transaction 没有发给目标 Sequencer。uvm\_do 使用默认 Sequencer，跨接口场景必须使用 uvm\_do\_on 或 Virtual Sequence 明确目标。
+
+第三，多个 Sequence 互相阻塞。检查仲裁算法、优先级、Lock 和 Grab 是否造成长期独占。
+
+第四，Sequence 一直卡在等待状态。检查 is\_relevant 和 wait\_for\_relevant 是否成对实现，恢复条件是否能被触发。
+
+第五，仿真提前结束。检查 Objection 是否由错误的 Sequence 提前释放，或者顶层 Virtual Sequence 没有正确控制生命周期。
+
+第六，对象复用导致约束残留。复用 Transaction 时，应重新随机化需要变化的字段，并确认响应队列和事务 ID 不会串联错误。
+
+第七，fork join\_none 启动后台进程后，父 Sequence 已经结束，子事务却仍在运行。必须明确后台进程的生命周期和清理逻辑。
+
+Sequence 调试不应该只查看 body 内部代码，还要沿启动方式、Sequencer 仲裁、Driver 握手和 Objection 结束顺序逐层检查。
+
+十二、Sequence 的设计目标是可组合，而不是写得短
+
+一个好的 Sequence，应该有明确场景边界，可以被 Test 直接复用，也可以被更高层 Sequence 组合。
+
+基础 Sequence 负责单一动作，功能 Sequence 负责一组有序动作，Virtual Sequence 负责跨接口调度，Test 只负责选择配置和场景。
+
+约束应该尽量靠近事务产生的位置，公共配置通过 Config\_db 或 Sequencer 暴露，跨接口同步由 Virtual Sequence 统一控制。
+
+Sequence Library 可以用于管理和随机选择一组 Sequence，适合扩展随机场景，但不能替代清晰的场景分层。
+
+Sequence 的可观测性同样重要。关键阶段应有日志，事务 ID、响应和错误信息要能够关联，便于从失败用例回溯到具体场景。
+
+Sequence 不是代码越短越好，而是边界越清晰、组合越容易、失败越容易定位越好。
+
+结语
+
+UVM Sequence 的核心不是几个宏，而是一套场景调度机制。
+
+它负责从 Driver 中分离激励，通过 Sequencer 完成仲裁和握手，通过嵌套与继承实现复用，通过 Virtual Sequence 实现跨接口同步，通过 Objection 控制运行阶段的生命周期。
+
+掌握 Sequence，需要理解事务从哪里创建、怎样获得发送权限、何时交给 Driver、多个 Sequence 如何竞争，以及整个场景何时结束。
+
+能写出一个能发送事务的 Sequence 只是起点。能组织层次清晰的场景库，并让复杂测试稳定复用，才是 UVM Sequence 真正的工程价值。
+
+---
+
+# 24. [UVM源代码研究] 一文讲清楚UVM的phase跳转机制
+
+> 来源：https://mp.weixin.qq.com/s/1bausFJFQfhKLqBQx0hH_Q
+> 作者：款款就是飞哥
+> update 2026/09/27 18 : 38
+
+【UVM源代码研究】· 基于 IEEE 1800.2-2020（Accellera uvm-2020.3.1）源码
+
+## 24.1 引言
+
+在正式开始之前，先跟一直追这个系列的读者同步一下进度。此前我们在《PHASE机制》里，把 UVM 的 phase 从run\_test()一路跟到了uvm\_phase\_hopper::run\_phases()，讲清楚了 phase 本质上是一张由 schedule/domain 组织起来的有向无环图（DAG），由 phase hopper 这个"调度员"按**调度****→****同步****→****执行****→****收尾**的流程一个节点一个节点往下推。当时留了个尾巴没说——如果测试跑到一半，我想**跳回去重新配置一遍**，或者**跳过后面没用的激励直接收尾**，UVM 到底支不支持？
+
+支持的，这个能力就是今天的主角：phase.jump()。
+
+但说实话，jump是个"看着简单、用起来一堆坑"的接口。我见过不少同学第一次在 sequence 里调jump都是一脸懵逼：跳是跳了，可要么一堆组件没跟上、要么下一次再跑到这个 phase 时"它自己又跳了"、要么 objection 残留导致 phase 卡住死活不结束。所以这一篇，咱们追着源码，把jump从 API 入口一路跟到 phase hopper 的消费逻辑，讲清楚三件事：**它到底怎么跳、在****sequence****里怎么调、以及怎么跳得干净不留后患。**
+
+## 24.2 先补三个前置概念
+
+要看懂jump，得先记住三个概念，它们共同划定了 jump 的"合法范围"。这三个概念在《PHASE机制》里都讲过，这里只做快速复习。
+
+## 24.3 phase 是一张有向无环图（DAG）
+
+每个 phase 节点都维护着自己的前驱m\_predecessors和后继m\_successors（uvm\_phase.svh第 483-484 行），运行时 phase 的执行顺序就是由这张图决定的。以预定义的运行时 schedule 为例，12 个运行时 phase 的顺序是：
+
+pre\_reset → reset → post\_reset → pre\_configure → configure → post\_configure
+
+→ pre\_main → main → post\_main → pre\_shutdown → shutdown → post\_shutdown
+
+再加上和它们**并发**的全局run\_phase。所谓"前进"（forward）就是朝后继方向跳，"后退"（backward）就是朝前驱方向跳——jump能跳的目标，只能是当前 phase 的前驱或后继，这一点后面会重点讲。
+
+## 24.4 domain 与 schedule
+
+uvm\_domain是一组 phase schedule 的集合，默认的common domain 下挂着run\_phase所在的 run schedule 和那 12 个运行时 phase 所在的 runtime schedule。jump是**按****domain / schedule****作用**的：跳一个节点，整个 schedule 里共享该节点的组件都会跟着跳——这是"所有组件一起跳"的天然基础。
+
+## 24.5 phase 有 11 个状态
+
+*图**1**：**uvm\_phase\_state**状态枚举（**uvm\_object\_globals.svh**第**609-620**行）*
+
+![](UVM_AI_assets/image-0164.jpg)
+
+重点看最后两个：UVM\_PHASE\_JUMPING = 512是 jump 专属的中间态，UVM\_PHASE\_DONE = 256表示"正常跑完了"。jump 的状态流转和正常流转不一样，第三节会看到。
+
+## 24.6 jump 只在 task phase 里才有意义
+
+这一点很关键：build\_phase、connect\_phase这些 function phase 是同步顺序执行的，压根没有"中途跳走"的场景；真正会用到jump的，是run\_phase和那 12 个 task 化的运行时 phase。从源码看，execute\_phase里只有 task phase 才会 fork 出三个"退出条件"的监视分支（其中就有 JUMP 分支），function phase 直接traverse\_on完事。所以下文谈 jump，默认都在 task phase 的语境下。
+
+## 24.7 jump 到底干了啥：两个标志位而已
+
+先看官方文档对 jump 的定义（uvm\_phase.svh第 383-402 行的源码注释）：
+
+*图**2**：**jump**的官方注释（**uvm\_phase.svh**第**383-402**行）*
+
+![](UVM_AI_assets/image-0165.jpg)
+
+这段注释信息量很大，提炼三句：
+
+1. jump 是**在当前****domain****内**从当前 phase 把控制权转交给目标 phase；
+2. 分**局部跳**（schedule 内前/后）和**全局跳**（所有 domain，用jump\_all）两种；
+3. **jump****会保留既有的软同步关系**，跳完一个 domain 若领先了另一个同步 domain，会等那个落后的 domain 追上。最后这条是"所有组件协调一致"的重要保证。
+
+再看jump的入口实现，全文就两行（uvm\_phase.svh第 2009-2020 行）：
+
+*图**3**：**uvm\_phase::jump**实现（**uvm\_phase.svh**第**2009-2020**行）*
+
+![](UVM_AI_assets/image-0166.jpg)
+
+注意上面那段英文注释，它把 jump 的本质讲得明明白白，翻译过来就是：**这个函数并不直接改变控制流，也就是说新****phase****不会在这里被启动；它只是设置了一些标志，由****execute\_phase()****检测到这些标志后，再去执行真正的跳转。**
+
+两行代码干了两件事：set\_jump\_phase(phase)负责"往哪跳"，end\_prematurely()负责"现在就结束当前 phase"。咱们一个一个拆。
+
+## 24.8 set\_jump\_phase：确定跳转方向并落标志
+
+*图**4**：**uvm\_phase::set\_jump\_phase**实现（**uvm\_phase.svh**第**1922-1982**行）*
+
+![](UVM_AI_assets/image-0167.jpg)
+
+这段代码逐段翻译：
+
+1. **活跃性检查（第****1926-1944****行）**：active = (state >= UVM\_PHASE\_STARTED) && (state <= UVM\_PHASE\_ENDED)。只有当前 phase 处于STARTED到ENDED之间（即正在跑）才能跳。如果 phase 还没活跃你就调jump，它会报JMPPHIDL错误，并告诉你"该 phase 当前不在活跃状态，这个跳转要等 phase 活跃了才会生效"。这解释了很多人遇到的"跳转没反应"——你在错误的时机调了 jump。
+2. **方向判定（第****1946-1979****行）**：先在**前驱集合**里找目标（m\_find\_predecessor(phase, 0)），找到就是**后退跳**（m\_jump\_bkwd = 1）；找不到再去**后继集合**里找（m\_find\_successor(phase, 0)），找到就是**前进跳**（m\_jump\_fwd = 1）。
+3. **非法目标（第****1961-1967****行）**：如果既不是前驱也不是后继，直接uvm\_fatal("PH\_BADJUMP", ...)终止仿真——注释说得很直白：既然你调 jump 的意图就是跳走，那继续留在当前 phase 已经没意义了，又没有一个合法目标，只能结束。**所以****jump****的目标不能乱填，必须是当前****phase****的前驱或后继节点。**
+4. **落标志（第****1981****行）**：m\_jump\_phase = d，把目标存下来。至此，m\_jump\_fwd / m\_jump\_bkwd / m\_jump\_phase三个内部标志就位（声明在uvm\_phase.svh第 512-514 行）。
+
+## 24.9 end\_prematurely：请求"提前结束"当前 phase
+
+*图**5**：**uvm\_phase::end\_prematurely**实现（**uvm\_phase.svh**第**1994-2001**行）*
+
+![](UVM_AI_assets/image-0168.jpg)
+
+就是一个m\_premature\_end = 1。这个标志才是真正"扳动扳机"的那个：它会让execute\_phase里那个一直wait的 JUMP 监视分支立刻被唤醒。下一节就看这个消费过程。
+
+## 24.10 标志在哪被消费：execute\_phase的三选一
+
+jump只是"埋雷"，真正"引爆"的地方在uvm\_phase\_hopper::execute\_phase。回顾一下，每个 task phase 在执行时，hopper 会先 fork 一个master\_phase\_process去遍历所有组件的该 phase 任务，然后进入一个"三选一"的等待（uvm\_phase\_hopper.svh第 489-603 行）：
+
+*图**6**：**execute\_phase**的退出判定三选一（**uvm\_phase\_hopper.svh**第**489-603**行）*
+
+![](UVM_AI_assets/image-0169.jpg)
+
+翻译一下这个fork ... join\_any的三个分支：
+
+1. **JUMP****分支（第****497-500****行）**：wait (phase.m\_premature\_end)。只要你调过end\_prematurely()，这个 wait 立刻返回，打印PHASE EXIT ON JUMP REQUEST，于是join\_any命中，disable fork把另外两个分支全关掉。**这就是****jump****的****"****引爆点****"****。**
+2. **ALL DROPPED****分支（第****502-546****行）**：正常的结束路径，等 objection 全部 drop，再走READY\_TO\_END的若干轮协商（max\_ready\_to\_end\_iters，默认 20 次）。
+3. **TIMEOUT****分支（第****548-596****行）**：只对run phase 生效的看门狗，超时uvm\_fatal。
+
+所以整体逻辑非常清晰：**phase****正常时在****"****等****objection****全****drop"****，一旦有人调了****jump****，****m\_premature\_end****被置位，****JUMP****分支抢先返回，****phase****直接以****"****提前结束****"****的方式收场。**
+
+## 24.11 jump 的完整生命周期：提前结束后的三步清理
+
+JUMP 分支命中后，process\_phase会依次走end\_phase → cleanup\_phase → finish\_phase三个收尾函数。跳转的"重头戏"就在这三步里。先回顾一下process\_phase的骨架（uvm\_phase\_hopper.svh第 775-784 行）：
+
+*图**7**：**process\_phase**骨架（**uvm\_phase\_hopper.svh**第**775-784**行）*
+
+![](UVM_AI_assets/image-0170.jpg)
+
+## 24.12 end\_phase：识别"提前结束"，走 ENDED
+
+end\_phase里首先判断phase.m\_premature\_end（uvm\_phase\_hopper.svh第 611-642 行）：
+
+*图**8**：**end\_phase**的提前结束分支（**uvm\_phase\_hopper.svh**第**611-642**行）*
+
+![](UVM_AI_assets/image-0171.jpg)
+
+如果是提前结束，它会打出PH\_JUMP日志（jump 到某 phase）或"ending prematurely"（无目标跳转），然后唤醒那些READY\_TO\_END上等待的进程，进入UVM\_PHASE\_ENDED状态并traverse\_on执行各组件的phase\_ended回调。
+
+## 24.13 cleanup\_phase：进入 JUMPING 态、杀掉进程、清空 objection
+
+cleanup\_phase是"无残留"的第一道保险（uvm\_phase\_hopper.svh第 670-702 行）：
+
+*图**9**：**cleanup\_phase**实现（**uvm\_phase\_hopper.svh**第**670-702**行）*
+
+![](UVM_AI_assets/image-0172.jpg)
+
+这里三件事，件件都跟"不留后患"相关：
+
+1. **状态置****UVM\_PHASE\_JUMPING****（第****678-686****行）**：跳转的 phase 走JUMPING态而不是正常的CLEANUP态，这是它和正常结束在状态机上的唯一区别。
+2. **m\_phase\_proc.kill()****（第****689-692****行）**：杀掉那个 fork 出来的master\_phase\_process。这个进程是所有组件该 phase 任务的父进程，杀掉它，所有组件在该 phase 里的任务线程（run\_phase/main\_phase等）统统被终止。**这就是****"****所有组件都能跳出去****"****的底层保证****——****不是逐个组件去通知，而是直接杀掉整个进程树。**
+3. **清空****objection****（第****694-698****行）**：phase\_done.clear()把这个 phase 上累积的所有 objection 计数清零。不然残留的 objection 会让下次再跳到这个 phase 时"永远等不到全 drop"。
+
+## 24.14 finish\_phase：前进跳"假装跳过"、清理目标、重新调度
+
+finish\_phase是跳转真正的"落地点"（uvm\_phase\_hopper.svh第 704-772 行）：
+
+*图**10**：**finish\_phase**的跳转处理（**uvm\_phase\_hopper.svh**第**704-772**行）*
+
+![](UVM_AI_assets/image-0173.jpg)
+
+重点看第 721-727 行的跳转清理：
+
+1. **前进跳：****clear\_successors(UVM\_PHASE\_DONE, jump\_phase)****（第****722-723****行）**。把当前 phase 到目标 phase 之间所有被跳过的节点，全部标记成UVM\_PHASE\_DONE，**假装它们已经正常跑完了**。为什么？因为这些节点的组件 phase 任务压根没执行，如果不"假装完成"，后面某个 phase 在sync\_phase里wait\_for\_state(UVM\_PHASE\_DONE)等前驱时会永远等不到，导致死锁。这是前进跳最精妙的一处设计。
+2. **jump\_phase.clear\_successors()****（第****725****行）**：把跳转目标自身的后继清成 DORMANT，为它接下来重新执行做准备。对应源码里的clear / clear\_successors（uvm\_phase.svh第 2041-2071 行），深度优先遍历 DAG，对每个节点clear()：恢复 DORMANT、置空m\_phase\_proc、清空 objection。
+3. **set\_jump\_phase(null)****（第****726****行）**：**把****jump****标志清掉**。这一步极其重要——它保证下一次再正常跑到这个 phase 时，不会因为残留的m\_jump\_phase又"自动跳一次"。很多同学遇到的"第二次跑到这个 phase 它自己又跳了"，根因就是没理解这一点（正常用法下 UVM 会替你清，见第八节）。
+4. **schedule\_phase(jump\_phase, phase)****（第****747-749****行）**：把跳转目标重新塞进 phase hopper 的调度队列，它从SCHEDULED状态重新走一遍**同步****→****执行****→****收尾**。
+
+至此，jump的完整生命周期闭环：**设标志（****jump****）****→****引爆（****execute\_phase****的****JUMP****分支）****→****结束（****ENDED****）****→****清理（****JUMPING + kill +****清****objection****）****→****重调度（****schedule\_phase****目标）**。
+
+## 24.15 前进跳 vs 后退跳：一个假装完成，一个原样重跑
+
+前面反复提到前进/后退，这里把它们的行为差异单独拎出来对比，因为它们对"残留影响"的处置完全不同：
+
+**后退跳（****backward****，****m\_jump\_bkwd****）**：跳回一个已经跑过的前驱 phase，比如从main跳回reset。目标 phase 会被重新调度、重新执行一遍，组件的reset\_phase会再跑一次。因为跳回去的路上没有"被跳过"的节点，所以不需要clear\_successors(DONE)那套"假装完成"。
+
+**前进跳（****forward****，****m\_jump\_fwd****）**：跳到还没跑过的后继 phase，比如从reset直接跳到shutdown。中间被跳过的post\_reset、configure、main等节点，组件代码**不会执行**，但会被clear\_successors(UVM\_PHASE\_DONE, jump\_phase)标记为DONE以免死锁。
+
+这里要特别提醒一个**前进跳的副作用**：被跳过的 phase，其组件里的pre\_main\_phase/main\_phase等任务**压根不会执行**。如果你的环境假设"这些 phase 一定会跑"（比如在configure\_phase里做关键配置），那前进跳过去后环境状态可能是不完整的。所以前进跳通常用于"后面这段激励不用跑了，直接收尾"这类明确要舍弃的场景。
+
+两个查询函数is\_jumping\_forward() / is\_jumping\_backward()（uvm\_phase.svh第 1984-1992 行）就是返回这两个标志，供phase\_state\_change回调里判断方向用。
+
+## 24.16 在 sequence 里怎么调 jump：关键是拿到 phase 句柄
+
+jump是uvm\_phase的方法，但 sequence 不是 component，它没有现成的phase参数。所以 sequence 里调jump的**唯一障碍是****"****怎么拿到当前正在跑的****phase****句柄****"**。答案是starting\_phase。
+
+## 24.17 starting\_phase 的三个访问入口
+
+uvm\_sequence\_base里有一个公开成员starting\_phase，以及配套的get\_starting\_phase() / set\_starting\_phase()（uvm\_sequence\_base.svh第 611-686 行）：
+
+*图**11**：**sequence**的**starting\_phase**相关（**uvm\_sequence\_base.svh**第**611-686**行）*
+
+![](UVM_AI_assets/image-0174.jpg)
+
+注意get\_starting\_phase用的是uvm\_get\_to\_lock\_dap（"第一次 get 就锁定"的数据访问策略）：一旦有人 get 过这个值，后面再想改starting\_phase就会被忽略并报错。这是为了防"跑起来后 phase 被偷偷改掉"。所以**要在****sequence start****之前就****set****好****phase**。
+
+## 24.18 情况 A：default\_sequence（自动拿到 phase）
+
+如果你用default\_sequence的方式启动 sequence（uvm\_config\_db配在某个 sequencer 的某个 phase 上），那 phase 句柄是**自动注入**的。uvm\_sequencer\_base::start\_phase\_sequence里第 1472 行明确调了seq.set\_starting\_phase(phase)：
+
+*图**12**：**default\_sequence**自动注入**phase**（**uvm\_sequencer\_base.svh**第**1466-1472**行）*
+
+![](UVM_AI_assets/image-0175.jpg)
+
+所以 default\_sequence 的 body 里，直接get\_starting\_phase().jump(...)就能拿到 phase 并跳转。
+
+## 24.19 情况 B：手动 start（必须自己 set phase）
+
+如果你在某个组件的 phase 里手动seq.start(sequencer)，那就要注意：uvm\_sequence\_base::start的签名里**根本没有****phase****参数**（uvm\_sequence\_base.svh第 301-304 行）：
+
+*图**13**：**start**签名没有**phase**参数（**uvm\_sequence\_base.svh**第**301-304**行）*
+
+![](UVM_AI_assets/image-0176.jpg)
+
+所以starting\_phase默认是 null，你在 body 里调get\_starting\_phase()拿到的是 null，再调.jump()就会空指针报错。正确做法是 start 之前手动设置：
+
+```
+task my_test::main_phase(uvm_phase phase);
+  my_seq seq = my_seq::type_id::create("seq");  seq.starting_phase = phase;      // 关键：手动把 phase 塞给 sequence  seq.start(m_env.agent.sqr);endtask
+```
+
+seq 的 body 里这样跳：
+
+```
+class my_seq extends uvm_sequence #(my_item);
+  task body();    // ... 跑了若干激励后，发现需要回 reset 重新配一遍    `uvm_info(get_type_name(), "触发 jump：回到 reset", UVM_LOW)    get_starting_phase().jump(uvm_reset_phase::get());  endtaskendclass
+```
+
+这里的uvm\_reset\_phase::get()返回的是运行时 schedule 里那个 reset 节点的**单例**句柄（uvm\_runtime\_phases.svh里每个 phase 类都实现了静态get()返回单例），直接用类名::get()就能拿到目标 phase，不用自己去find。
+
+## 24.20 "跳回去且无残留"：源码里的四道保险+两个坑
+
+把前面串起来，UVM 在源码层面为"所有组件一起跳、且不留残留"设计了四道保险：
+
+**保险一：****schedule****级整体跳转****+****软同步保留**。jump 作用在 phase 节点上，而这个节点是 schedule 里所有组件共享的，所以"跳"是整体行为，不存在"某组件跳了、别的组件没跳"。同时sync\_phase里对m\_sync关系的等待（uvm\_phase\_hopper.svh第 425-429 行）会保留既有的软同步，跳完的 domain 会等落后的 domain 追上，保证多 domain 场景下大家步调一致。
+
+**保险二：杀进程树（****cleanup\_phase****的****kill****）**。一个m\_phase\_proc.kill()干掉整个 phase 遍历进程树，所有组件的该 phase 任务线程瞬间终止，谁也不会"多跑半步"。
+
+**保险三：清****objection****（****cleanup\_phase + finish\_phase****各清一次）**。跳转前后把 phase 上的 objection 计数清零，防止残留 objection 卡死下一次执行。
+
+**保险四：清****jump****标志****+****前进跳****"****假装****DONE"****（****finish\_phase****）**。set\_jump\_phase(null)防"下次自动再跳"，clear\_successors(UVM\_PHASE\_DONE)防"死锁"。
+
+但注意，这四道保险只覆盖 UVM 自己管得到的部分。**你自己****fork/join\_none****出去、又没挂在****phase****进程下的独立线程，以及你自己****raise****的****objection****，****UVM****不会替你收拾。**下面这两个坑，踩过的都懂：
+
+## 24.21 坑1：往后跳之前一定要做好保护措施，保证下次再运行到该phase的时候这个跳转代码不会执行，UVM不会帮你保证phase里执行的具体内容，如果不加保护，就会陷入无限死循环来回跳，保护的方法可以参考后面的例子。
+
+## 24.22 坑2：前进跳会跳过组件代码，第五节的副作用这里再强调一遍：前进跳跳过的 phase，组件代码不执行。如果你依赖"configure 一定会跑"，前进跳过去后配置缺失。**结论：前进跳只用于明确要舍弃的区间。**
+
+## 24.23 注意事项清单（建议收藏）
+
+1. **时机**：jump 只在当前 phase 处于STARTED ~ ENDED时有效，否则报JMPPHIDL，且要等 phase 活跃后才生效。
+2. **目标**：jump 目标必须是当前 phase 的前驱或后继，否则PH\_BADJUMP fatal 终止仿真。
+3. **范围**：jump 只对 task phase 有意义（run\_phase和 12 个运行时 phase）。
+4. **方向**：后退跳会重跑目标 phase；前进跳会"假装"跳过中间的 phase（组件代码不执行）。
+5. objection：jump 会无条件清空当前 phase 的 objection，跳回去后要重新 raise。
+6. sequence**里调用**：先确认starting\_phase非 null——default\_sequence 自动注入，手动start要自己seq.starting\_phase = phase。
+7. **残留线程**：phase 进程树外的独立线程不会被自动清理，要自己管理。
+8. **全局跳**：要所有 domain 一起跳，用uvm\_domain::jump\_all(phase)，而不是对单个 phase 调jump——uvm\_phase::jump\_all在 2020.3.1 里已废弃，源码里直接uvm\_warning("NOTIMPL", ...)让你转去用uvm\_domain::jump\_all。
+
+*图**14**：**uvm\_domain::jump / jump\_all**（**uvm\_domain.svh**第**208-240**行）*
+
+![](UVM_AI_assets/image-0177.jpg)
+
+## 24.24 一个能跑的最小例子
+
+最后给一个能直接跑的最小例子：环境在main\_phase里第一次跑完就触发 jump 回到reset，验证"跳回去后 reset 再跑一遍、且第二次正常结束不留后患"。
+
+```
+// jump_demo_env.sv
+class jump_demo_env extends uvm_env;  `uvm_component_utils(jump_demo_env)
+  int run_cnt = 0;   // 防止 reset/main 互相跳成死循环的"护栏"
+  function new(string name, uvm_component parent);    super.new(name, parent);  endfunction
+  task reset_phase(uvm_phase phase);    phase.raise_objection(this);    `uvm_info(get_name(), ">>>> reset_phase 执行", UVM_LOW)    #20ns;    phase.drop_objection(this);  endtask
+  task main_phase(uvm_phase phase);    phase.raise_objection(this);    `uvm_info(get_name(), ">>>> main_phase 执行", UVM_LOW)    #30ns;    if (run_cnt == 0) begin      run_cnt++;      `uvm_info(get_name(), ">>>> 第一次跑完 main，触发 jump 回 reset", UVM_LOW)      phase.jump(uvm_reset_phase::get());   // 后退跳：回到 reset    end    phase.drop_objection(this);  endtaskendclass
+```
+
+仿真打印大致是：reset → main → （jump）→ reset → main → 正常结束。注意第二次main\_phase里run\_cnt已经是 1，不再触发 jump，phase 自然结束。这里有几个刻意强调的点：
+
+1. 每个 phase 里都先raise\_objection再drop\_objection，保证 phase 有 objection 撑住；
+2. jump 时 objection 尚未 drop 也没关系，因为 cleanup\_phase 会帮我们把残留的 objection 清空；
+3. 用run\_cnt这种静态标志避免"无限跳"——否则 reset 和 main 会互相跳成死循环，这个护栏务必加上，保证了上文提到的坑1不会出现。
+
+## 24.25 总结
+
+1. # jump的本质是**设标志**：set\_jump\_phase（记目标 + 判方向）+ end\_prematurely（置m\_premature\_end），并不当场改控制流。
+2. # 真正的"引爆点"在execute\_phase的fork/join\_any里那个wait(m\_premature\_end)的 JUMP 分支。
+3. # 跳转的清理三步走：end\_phase走ENDED → cleanup\_phase置JUMPING、kill进程树、清 objection → finish\_phase前进跳"假装 DONE"、清 jump 标志、schedule\_phase目标。
+4. # 前进跳跳过中间 phase（组件代码不执行），后退跳重跑目标 phase。
+5. sequence 里调 jump，关键是拿到starting\_phase：default\_sequence 自动注入，手动start要自己 set。
+6. "无残留"靠四道保险（schedule 级跳 + 软同步、杀进程树、清 objection、清标志），但你自己 fork 的独立线程和跨 phase 的 objection 要自己管。
+
+jump 是 UVM phase 机制里最"灵活也最危险"的一把刀，用好了能优雅地实现"复位重配""提前收尾"这类需求，用不好就是死锁和残留线程的温床。
+
+---
+
+# 25. 边界感非常重要，UVM也是需要的
+
+> 来源：https://mp.weixin.qq.com/s/KXTfmAAuXOJeIsp22b7WHg
+> 作者：周漾
+> update 2026/09/27 18 : 42
+
+UVM 环境好不好维护，关键不在类的数量，而在每个组件是否只处理自己的那段工作。sequence 决定要发什么。driver 决定怎样按协议发出去。monitor 只看接口实际发生了什么。scoreboard 只比较 expected 和 actual。这样出错时可以沿数据流往前查。若一个组件同时做了两三件事，stimulus、protocol、observation 和 checking 就会混在一起。
+
+术语与总图
+
+interface 是静态信号和 clocking/modport 的集合；它连接 DUT 与 testbench。sequence 是生成 transaction 的场景程序。sequencer 在多个 sequence 间仲裁 item，并向 driver 提供 seq\_item\_port 服务。driver 将 transaction 转换为 interface 上的时序动作。monitor 从 interface 采样并重新组装 transaction。agent 将 sequencer、driver、monitor 和配置封装成一个接口级单元。env 负责创建并连接多个 agent、predictor、scoreboard 与 coverage。scoreboard 比较 expected 与 actual，不直接参与信号驱动。
+
+![](UVM_AI_assets/image-0178.png)
+
+图 1：sequence 到 driver 是 stimulus 路径；monitor 到 predictor/scoreboard/coverage 是 observation 路径，两条路径只通过 DUT/接口行为相遇。
+
+实际使用中，base driver 常提供永久 get\_next\_item → drive\_item → item\_done 循环。派生 driver 负责具体 vif 与协议握手。monitor 将接口事件转成 transaction 后经 analysis port 发布。response handler、predictor 和 scoreboard 在 driver 之外处理返回和比较。这样 driver 能被协议变体复用，monitor 不依赖 sequence，scoreboard 也不会反向污染 stimulus。
+
+interface：信号事实的边界
+
+interface 是静态 HDL 世界的一部分，适合承载 clock、reset、request/response 信号、clocking block 和 modport。它能做的是定义“真实信号如何被访问”；不能做的是决定某个 test 要发什么业务场景，也不应该保存跨 transaction 的 verification policy。
+
+driver 和 monitor 通过 virtual interface 访问同一真实实例，但职责相反。driver 使用 driver modport 或 clocking block drive 输出；monitor 使用 monitor modport 采样输入。让两者共享一个未限制方向的 vif，会使 monitor 意外 drive 信号或 driver 读取错误时刻的风险增加。
+
+![](UVM_AI_assets/image-0179.png)
+
+图 2：边界规则不是限制功能，而是让 stimulus、协议行为、observation 和 checking 各自可独立定位。
+
+sequence：描述场景，不直接操作 pin
+
+sequence 的输入是 scenario 参数和配置，输出是 transaction。它可以决定地址、长度、ID、错误注入选择或多个子 sequence 的顺序；不能直接写 vif.valid、等待 pin-level ready 或调用 scoreboard 内部方法。直接 drive 信号会绕过 driver 的协议处理，导致同一 sequence 在另一个 agent 或接口版本中无法复用。
+
+sequence 应通过 start\_item/finish\_item 或子 sequence start 把 item 交给 sequencer。若需要等待最终结果，sequence 等 response 或检查 system-level completion；它不应该从 monitor 的私有 queue 偷取 transaction。这样 issued、accepted、response 的边界才能保留在正确组件中。
+
+sequencer：仲裁，不解释协议
+
+sequencer 的职责是仲裁 sequence 的 item，维护 start\_item、grant、lock 和 item\_done 的握手。它知道哪个 sequence 当前获得发送机会，但不应该知道 transaction 如何映射为信号，也不应该根据 address 自己生成 response。把协议语义塞进 sequencer 会让 priority/lock 调试与接口功能错误纠缠在一起。
+
+在多个 sequence 竞争一个 driver 时，sequencer 可以处理 priority、lock、relevance 等仲裁状态。若 start\_item 卡住，先看 grant、lock owner 和 relevance；不要先改 driver。反过来，item 已经 finish\_item 而 driver 没有 get\_next\_item，才应检查 sequencer-driver connection 或 driver 是否仍卡在上一笔协议完成。
+
+driver：把 transaction 变成协议动作
+
+![](UVM_AI_assets/image-0180.png)
+
+代码图 1：agent 创建 sequencer、driver、monitor，并在 connect\_phase 连接 driver 的 item port 和 monitor 的 analysis port。
+
+driver 是唯一应把 transaction 变成 interface drive 的组件。它从 seq\_item\_port 领取 request，等待协议允许时 drive 信号，等待 ready/busy/completion 等完成条件，再调用 item\_done。driver 可以持有 vif、协议状态和 per-lane queue；不能计算 reference result，也不应该根据 scoreboard 是否匹配来改变协议 drive。
+
+![](UVM_AI_assets/image-0181.png)
+
+代码图 2：driver 领取 item 后完成接口握手，再调用 item\_done；item\_done 之前的等待属于协议边界。、
+
+实际使用中也是类似分层：base driver 统一处理 item lifecycle，派生 driver 处理具体 vif、busy/ready、queue 和 response。这个模式的直接好处是 reset 时可以在 base 层保证 item 不会永久挂住，而协议子类只需要定义取消、失败 response 或 retry 的具体语义。
+
+monitor：只观察、组包、发布
+
+monitor 不应依赖 sequence 发送过什么，也不应访问 driver 的当前 request。它只观察 interface 的客观行为，在完整握手或协议边界到达时创建新的 transaction。monitor 的输出经 analysis port 广播给 predictor、scoreboard、coverage 和日志组件，因此 monitor 发布的对象应是稳定快照；复用对象前需要 copy/clone，避免下一笔采样改写历史 transaction。
+
+![](UVM_AI_assets/image-0182.png)
+
+代码图 3：monitor 在有效握手时组装新的 item，并用 analysis port 发布；它不 drive 任何 interface 信号。
+
+如果 driver 显示已发 request，monitor 没有输出，先查 pin-level handshake、clocking block 和 monitor 组包条件；不要让 scoreboard 直接调用 driver 重发。monitor 输出存在而 scoreboard 没比较时，再查 analysis connection、predictor 和 pending 匹配。
+
+scoreboard、predictor 与 coverage：使用 transaction，但不驱动接口
+
+predictor 根据 input transaction、配置和 reference model state 生成 expected transaction。scoreboard 接收 expected 与 actual，按 ID、顺序或 per-ID queue 配对比较。coverage subscriber 根据 transaction 和配置采样 coverage。它们可以共享 monitor 的 analysis stream，也可以接收 sequence 侧的 expected input。共同边界是：这些组件不直接 drive interface，也不改写 monitor 已发布的 transaction。
+
+​
+
+![](UVM_AI_assets/image-0183.png)
+
+代码图 4：scoreboard 从 expected table 按 ID 找到 expected，再与 actual compare；它报告 mismatch，但不 drive interface。
+
+scoreboard 的边界特别重要。它可以记录 pending、timeout、错误 status 和统计计数；不能为了“让测试通过”改 DUT 信号、补发 request 或修改 monitor transaction。若 comparison 失败，正确动作是报告证据：ID、address、expected、actual、pending size 和时间戳。
+
+test：选择场景，定义系统级结束条件
+
+test 是 UVM component tree 的场景入口。它创建或选择 env，设置 test-specific configuration，启动 top-level sequence，并决定何时 raise/drop objection。test 关心的是“这个场景要验证什么”。例如 smoke test、error injection、reset during traffic 或 performance test，差异通常首先出现在 test 选择的 sequence 和 configuration。
+
+![](UVM_AI_assets/image-0184.png)
+
+代码图 5：test 创建 env，启动 sequence，并等待 scoreboard pending 清零后 drop objection。
+
+test 不应直接 drive interface。它也不应手写 agent 内部 port connection。前者会绕过 driver 的协议边界，后者会让同一个 env 难以复用。test 可以等待 system-level completion，例如 pending 为零、interrupt 到达或 error 已被检查；但具体 transaction 的 drive、sample 和 compare 仍留在 driver、monitor 和 scoreboard。
+
+一个常见结束错误是 sequence start 返回后立即 drop objection。sequence 可能只表示不再发新 request，response 或 scoreboard compare 还在进行。将 
+
+pending\_count()==0、error status 和 timeout 作为 test 的结束条件，能避免最后几笔 transaction 被仿真结束吞掉。
+
+agent 与 env：封装接口，组织系统
+
+agent 的职责是封装一种接口能力。active agent 包含 sequencer、driver、monitor；passive agent 通常只保留 monitor。两种 agent 对外都应暴露稳定的 analysis port，让 env/scoreboard 不关心内部是否存在 driver。env 是多个 agent 的共同 owner，负责在 connect\_phase 连接 monitor、predictor、scoreboard 和 virtual sequencer；它不应该在 run\_phase 手写具体 pin-level stimulus。
+
+​
+
+![](UVM_AI_assets/image-0185.png)
+
+图 3：agent 内部封装 protocol，env 负责跨 agent 连接；transaction 从 interface 观察路径流向 checking 组件。
+
+读懂输出与调试
+
+一个健康场景的日志应能看到 sequence issued、driver accepted、monitor 
+
+observed、scoreboard matched 四类信息。它们不是重复日志，而是四个不同边界。issued 有但 accepted 无，检查 
+
+sequencer/driver；accepted 有但 observed 无，检查协议 drive 或 monitor；observed 有但 matched 无，检查 analysis connection 或 pending table；matched 失败则检查 predictor 和 transaction 字段。
+
+![](UVM_AI_assets/image-0186.png)
+
+图 4：沿 sequence、driver、monitor、scoreboard 四个边界逐段确认，避免直接在错误组件中修问题。
+
+DV 检查点
+
+检查 sequence 不直接访问 vif；driver 不直接调用 scoreboard；monitor 不 drive 信号；scoreboard 不修改 transaction 后再 compare。对每个 accepted item，driver 必须最终 item\_done；对每个 monitor transaction，analysis subscriber 应有一致接收计数；测试结束时 scoreboard pending 必须清空或被明确取消。coverage 应覆盖 active/passive agent、response error、reset 中断和多 sequence 仲裁场景。
+
+面试问答
+
+问题 1：为什么 sequence 不应该直接 drive virtual interface？
+
+回答：sequence 描述场景，driver 描述协议时序。直接 drive 会绕过 driver 的握手、reset、response 和 reusable agent 边界，使 sequence 与具体接口绑定。
+
+问题 2：monitor 能否使用 driver 的 request queue 来构造 transaction？
+
+回答：不能。monitor 必须从 interface 观察事实；使用 driver queue 只能证明 stimulus 打算发什么，不能证明 DUT 实际接收或响应了什么。
+
+问题 3：scoreboard 能否在 mismatch 后让 driver 重发？
+
+回答：不能。scoreboard 应报告 mismatch 并保留证据。重发属于 test/sequence 的场景策略，若由 scoreboard 反向控制 driver，会破坏 observation 与 stimulus 的独立性。
+
+小结
+
+UVM 边界可以按数据流理解。interface 提供信号事实。sequence 生成场景。sequencer 仲裁 item。driver drive 协议。monitor 观察并发布。predictor 生成 expected。scoreboard compare。agent 封装一条接口。env 组织多个组件。每个组件守住自己的输入和输出，debug 时就能找到可信的起点。
+
+---
+
+# 26. UVM RAL 真正的价值，不是简化寄存器读写
+
+> 来源：https://mp.weixin.qq.com/s/dpurdaVVoEC391-LOHyjUg
+> 作者：枫
+> update 2026/09/27 18 : 43
+
+很多验证工程师第一次接触 RAL，会把它理解成一套更规范的寄存器读写接口。能用寄存器名访问地址、能打印寄存器值、能通过 Adapter 走总线，就认为 RAL 已经集成完成。
+
+但 RAL 的价值远不止少写几行总线事务。它要把 DUT 中的寄存器抽象成软件模型，让验证环境同时掌握寄存器的地址、字段、访问属性、复位值、镜像状态和覆盖率。
+
+如果只把它当作读写工具，就会忽略镜像值、预测器、前门和后门访问之间的语义差异，最终得到一个“能读写但不可信”的寄存器模型。
+
+RAL 真正解决的是：验证程序如何理解寄存器、控制寄存器，并证明寄存器行为符合规格。
+
+## 26.1 RAL 的抽象层次高于普通寄存器访问
+
+没有 RAL 时，验证代码通常直接创建总线事务，把地址、数据、读写方向交给 Driver。寄存器字段含义、有效位和副作用都留在工程师记忆或注释中。
+
+RAL 把这些信息抽象成模型。每个字段有位置、访问属性、复位值和覆盖点，每个寄存器有地址映射和所属 Block，每个 Map 关联具体总线接口。
+
+在此基础上，RAL 提供了镜像值和访问方法。验证程序可以通过寄存器名而不是地址操作寄存器，也可以在需要时比较镜像值和实际硬件值。
+
+RAL 还支持多套地址映射和不同接口的 Adapter。同一个寄存器模型可以适配不同总线，也可以复用于不同 SoC 配置。
+
+因此，RAL 的第一层价值是可读性，第二层价值是复用，第三层价值才是自动检查与覆盖率。只实现第一层，不能算真正把 RAL 用好。
+
+## 26.2 RAL 的核心类分别负责什么
+
+寄存器模型通常由几个层级组成。
+
+uvm\_reg\_field 描述寄存器中的一个字段，包括位宽、访问属性、复位值和覆盖信息。
+
+uvm\_reg 描述完整寄存器，内部可以包含多个 Field。寄存器本身负责地址和整体访问。
+
+uvm\_mem 描述存储器或寄存器数组，它与普通 uvm\_reg 的访问和预测方式不同。
+
+uvm\_reg\_map 描述寄存器地址映射，并把它关联到具体总线。一个寄存器模型可以有多个 Map，对应不同接口或不同地址视图。
+
+uvm\_reg\_block 组织多个寄存器、存储器和 Map，构成一个完整寄存器模型。
+
+Adapter 负责在寄存器模型和总线事务之间转换。Reg2bus 把寄存器操作转换成总线 Transaction，Bus2reg 把总线返回值还原成寄存器响应。
+
+Predictor 则根据总线监测结果更新镜像值。没有 Predictor，RAL 只能知道模型自己发起了什么操作，无法可靠反映 DUT 的实际变化。
+
+理解这些类的职责，才能知道问题出现时应该检查模型结构、地址映射、Adapter、总线 Monitor，还是预测器连接。
+
+## 26.3 集成 RAL 要经过完整流程
+
+RAL 集成通常包含几个步骤：先确认基础寄存器访问能够通过总线完成，再建立寄存器描述文件或模型，然后生成或编写 RAL 类。
+
+接下来要创建 Adapter，把 RAL 与总线 Agent 连接起来，再将寄存器模型和 Predictor 放入验证环境。
+
+完成基础连接后，还需要通过寄存器 Sequence 访问前门，确认读写路径、地址映射和数据类型都正确。
+
+自动预测和显式预测的选择，应在模型构建阶段确定。Built-in Test 也需要根据项目规格配置，而不是直接套用默认流程。
+
+一个完整的 RAL 集成，至少应该验证：复位值是否正确，读写属性是否生效，字段是否会互相影响，地址映射是否冲突，预测结果是否与总线观测一致。
+
+如果只验证“能读到某个值”，还没有证明寄存器模型可信。
+
+## 26.4 Adapter 决定 RAL 能否正确接入总线
+
+Adapter 是寄存器模型与总线 Agent 之间的翻译层。
+
+Reg2bus 把 RAL 生成的读写请求转换成总线 Transaction，Bus2reg 把总线响应还原成 RAL 可以理解的结果。
+
+如果 Adapter 没有正确设置地址宽度、数据宽度、读写方向或响应字段，RAL 表面上报错或通过，都不能说明寄存器模型正确。
+
+多接口系统中，一个 Map 通常对应一个接口。寄存器连接多个总线时，必须通过不同 Map 区分地址域和访问路径。
+
+寄存器模型不是只描述寄存器值，它还描述“通过哪条总线访问”。Map、Adapter 和 Sequencer 的连接关系如果错误，模型会产生看似合法但发送到错误接口的事务。
+
+因此，Adapter 连接后，应该先用简单寄存器做前门读写闭环，再扩展到字段、数组和多个 Map。
+
+## 26.5 访问属性必须严格按照规格实现
+
+寄存器字段有大量访问类型：只读、只写、读写、写一清零、写一置位、读清零、读置位、写清零、写置位等。
+
+这些属性不只是文档信息，而是 RAL 预测行为和测试结果判断的基础。如果模型中写成一类读写属性，而 DUT 实际实现的是另一类语义，后续所有镜像值都会偏离。
+
+例如，写一清零寄存器在写入 0 时不应改变对应位，写入 1 才清零。只写寄存器读取时应返回错误或保留特定状态，而不是简单当作普通存储器。
+
+如果字段之间存在读写副作用，也必须通过正确的 Field 属性和 Predictor 逻辑表达。覆盖目标应包含读行为、写行为和组合副作用。
+
+寄存器验证不能只测“写入后读回相同值”。对于 RO、W1C、W1S、RC、WC 等类型，必须验证每次访问前后的值以及未参与操作的位是否保持不变。
+
+六、Map 管理地址，也管理访问路径
+
+uvm\_reg\_map 负责寄存器地址映射，并把模型连接到具体总线。
+
+寄存器模型可以包含多个 Map，对应不同总线、不同地址空间或不同功能模式。单接口系统常用默认 Map，多接口系统则必须明确每个寄存器的访问路径。
+
+地址映射检查应包括：是否存在地址重叠，字段是否跨越合法边界，数组和存储器的地址步长是否正确，地址位宽是否发生截断。
+
+如果项目支持多套配置模式，还要确认不同 Map 下的地址换算和访问权限。
+
+寄存器模型“能访问”不代表“地址映射正确”。必须用小规模边界访问验证地址边界、未映射地址和只读区域，防止模型把所有读写都导向一个默认路径。
+
+## 26.6 前门访问和后备访问不是一回事
+
+前门访问通过总线协议读写寄存器。它需要经历真实总线时序，能够受协议约束影响，也能发现总线错误和访问权限问题。
+
+后备访问通过软件路径直接读取或修改 RTL 内部信号，不需要总线时间，适合初始化、调试和快速检查。
+
+前门访问反映真实系统行为，后备访问反映内部状态。两者关注点不同，不能互相替代。
+
+后备访问虽然方便，但绕过了总线协议、时序关系和部分寄存器副作用。如果验证过程大量依赖后备写值，可能掩盖真实总线路径问题。
+
+正确做法是把后备访问用在需要快速设置或观察内部状态的地方，把前门访问用于验证寄存器接口本身。两者结合，才能同时覆盖协议和内部状态。
+
+## 26.7 预测机制决定镜像值是否可信
+
+Auto Prediction 在寄存器读写时自动更新镜像值。实现简单，但更新时序不一定与真实硬件周期完全一致，也无法反映 DUT 内部产生的变化。
+
+显式 Prediction 通过总线 Monitor 和 Predictor 更新镜像值。它能根据总线上的实际事务更新模型，也能在 DUT 内部改变寄存器值时继续保持同步。
+
+如果测试需要使用镜像值做判断，或者 DUT 中存在由硬件自动更新的状态寄存器，显式 Prediction 更可靠。
+
+但显式 Prediction 需要正确连接 Monitor、Adapter 和 Predictor，并处理复位、异常响应、部分写入和字段副作用。
+
+镜像值只是模型认知，不是硬件真值。任何镜像值都必须能通过前门读取或后备访问进行校验。
+
+当镜像值与实际值不一致时，不能简单修改模型让测试通过，而要判断是访问属性、预测路径、总线响应还是 DUT 行为出了问题。
+
+## 26.8 访问方法要区分“模拟真实行为”和“直接改硬件”
+
+RAL 提供了多组寄存器和字段访问方法，语义并不相同。
+
+Read 和 Write 通常既支持前门也支持后备访问。它们会按照寄存器模型中的访问属性模拟真实行为，适合正常验证流程。
+
+Mirror 用于读取实际硬件值并更新或检查镜像值，适合在测试结束后核对寄存器状态。
+
+Update 会比较期望值和镜像值，如果两者不同，再把期望值写入硬件，适合批量恢复配置。
+
+Poke 和 Peek 主要用于后备访问。Poke 可以直接修改硬件寄存器值，Peek 可以直接读取内部值。
+
+Poke 和 Peek 的特点是不模拟真实寄存器行为。对于只读寄存器，正常 Write 不能修改它，但 Poke 可以绕过访问属性直接改变内部状态。
+
+因此，Poke 适合调试、故障注入和初始化，不适合替代正常寄存器写操作。大量使用 Poke 会让验证绕过真实总线行为和寄存器语义。
+
+方法选择应该由验证目标决定，而不是因为后备访问更快就无限制使用。
+
+## 26.9 Built-in Test 不是跑过就算完成
+
+UVM RAL 提供了一些内建寄存器测试，用于检查复位值、位翻转、访问属性和相邻寄存器影响。
+
+这些测试能快速发现常见寄存器问题，但默认配置不一定覆盖项目全部规格。例如，W1C、W1S、锁存位、硬件自动更新状态和只读字段，需要结合具体访问属性调整测试策略。
+
+复位测试应检查所有寄存器的复位值，而不只是配置寄存器。状态寄存器、中断寄存器和计数器的复位行为同样重要。
+
+位翻转测试还要确认写入某一位不会影响其他字段，特别是相邻位、保留位和具有副作用的控制位。
+
+访问测试需要覆盖合法读写、非法写只读寄存器、写只写寄存器后读取、读清零和写置位等特殊行为。
+
+如果只运行默认测试，看到 Pass 就结束，寄存器覆盖率很可能并不完整。
+
+## 26.10 寄存器覆盖率应该反映真实检查
+
+寄存器覆盖率不只是“所有寄存器地址都访问过”。
+
+它至少应包括读写访问类型、字段边界、复位值、特殊访问属性、字段组合和异常响应。
+
+对于每个字段，应覆盖最小值、最大值、全零、全一、保留位和跨越字段边界的值。
+
+对于多个字段，应覆盖字段之间的相互影响。例如配置位改变后，状态位是否按预期变化，中断位是否能被正确置位和清除。
+
+对于未映射地址和非法访问，也应记录期望的响应和恢复行为，而不是只关注正常地址。
+
+覆盖率报告要能够解释哪些寄存器行为已经验证，哪些依赖硬件自动更新，哪些通过后备访问补测，哪些属于工具无法记录或规格未定义。
+
+寄存器验证的目标不是让覆盖率数字好看，而是证明每个访问属性都被正确实现。
+
+## 26.11 RAL 集成的常见问题
+
+第一个问题是只设置了寄存器模型，没有连接 Adapter。模型能创建，但无法通过总线访问。
+
+第二个问题是 Adapter 的数据宽度或地址换算错误，导致读写看似成功，实际访问了错误地址或数据。
+
+第三个问题是没有 Predictor，镜像值永远只反映模型的最后一笔写操作。
+
+第四个问题是访问属性与规格不一致，导致预测值、状态位和中断行为全部偏离。
+
+第五个问题是多个 Map 混用默认路径，寄存器发到了错误接口。
+
+第六个问题是过度依赖后备访问，绕过真实总线时序和访问权限。
+
+第七个问题是测试只检查写入后读回，没有覆盖清除、置位、硬件更新和字段副作用。
+
+解决这些问题，不能只修改单条测试，而要从模型、Map、Adapter、Predictor、Sequence 和覆盖率六个层面逐项核查。
+
+结语
+
+RAL 不是寄存器读写函数集合，而是一套把寄存器规格、地址映射、总线访问、镜像预测和覆盖率连接起来的验证模型。
+
+Read 和 Write 只是最外层接口。真正决定模型是否可信的，是访问属性是否准确，Map 是否对应正确总线，Adapter 是否正确转换，Predictor 是否可靠更新镜像值。
+
+前门访问验证真实系统行为，后备访问帮助观察和控制内部状态。两者可以配合，但不能互相替代。
+
+一个成熟的 RAL 模型，应该能够回答：寄存器在哪里，字段如何访问，写入后会产生什么副作用，镜像值为什么变化，异常访问如何响应，覆盖率是否证明了这些行为。
+
+当寄存器模型不仅能读写，还能预测、检查和解释结果时，RAL 才真正发挥了价值。
+
+---
+
+# 27. UVM 不是一套模板，而是一套验证工程方法
+
+> 来源：https://mp.weixin.qq.com/s/nQ3M0vRlHPAiTKGNi-2Ctg
+> 作者：枫
+> update 2026/09/27 18 : 43
+
+很多人学习 UVM，第一步就是找一套现成环境，把 Driver、Monitor、Agent、Sequence 和 Scoreboard 按模板搭起来。代码能运行以后，就认为自己学会了 UVM。
+
+但真正的 UVM 并不是一组固定组件，而是一套用于组织芯片验证工作的工程方法。它同时解决两个问题：验证环境在空间上如何分工，仿真过程在时间上如何协同。
+
+如果只记住类名，不知道机制为什么存在，环境一旦出现多接口、多 Sequence、寄存器访问或复杂结束条件，就会很快失去控制。
+
+理解 UVM，应该从“这些组件是什么”进一步走到“它们为什么这样协作”。
+
+一、UVM 的目标不是仿真，而是保证验证完备性
+
+传统 Testbench 解决的是如何向 DUT 输入激励、如何观察输出。UVM 关注的范围更大。
+
+它从设计规格出发，指导验证计划、测试点分解、测试用例组织、覆盖率收集、签核标准以及报告自动化。
+
+仿真只是执行验证计划的一种技术手段，不能替代验证本身。一个平台即使能产生大量激励，如果没有测试点映射、独立检查、覆盖率和结果追溯，也只是一组自动化脚本。
+
+UVM 的“通用”体现在多个维度：同样的组件和机制可以适配不同项目，环境结构可以复用，测试场景可以扩展，仿真阶段可以统一管理。
+
+它的“方法学”则意味着，组件之间不是简单连线，而是通过工厂、配置、Phase、Objection、Sequence和TLM等机制建立稳定协作。
+
+芯片验证真正需要的，不是更快地写出一套平台，而是让平台在多个项目中持续复用，并且能够证明哪些功能已经被验证。
+
+## 27.1 环境组件在空间上完成职责分工
+
+一套典型 UVM 环境包含 Transaction、Sequence、Sequencer、Driver、Monitor、Agent、Reference Model、Scoreboard、Environment 和 Test。
+
+Transaction 描述一次操作的数据。Sequence 负责产生和组合事务。Sequencer 负责调度 Sequence 与 Driver 的交互。
+
+Driver 把事务转换为接口信号，Monitor 观察接口并把信号还原为事务。两者分别负责驱动和采样，不应该混为一体。
+
+Reference Model 根据输入产生预期结果，Scoreboard 比较预期结果和实际结果。比较逻辑必须尽量独立，否则设计错误可能在参考模型中被复制。
+
+Agent 把同一接口方向的 Driver、Sequencer 和 Monitor 封装起来。Environment 组织多个 Agent、参考模型和检查组件。Test 负责选择配置和启动场景。
+
+这种划分的价值不是让类图更漂亮，而是让每个组件只有一个主要职责。出现问题时，可以沿着激励、驱动、采样、参考和比较路径逐段定位。
+
+组件分工越清楚，复用越容易；职责越混乱，所谓“复用”最终只会变成复制代码。
+
+## 27.2 UVM 本质上是一套面向对象框架
+
+UVM 使用 SystemVerilog 实现，但它提供的不是几个语法糖，而是一套完整的类库。
+
+这些类可以划分为核心基类、组件类、报告类、工厂类、寄存器类、Sequence类、TLM类、同步类以及各种宏和工具函数。
+
+类和继承关系解决了平台组件如何构建的问题，宏和工具函数解决了注册、创建、打印和类型转换等重复工作。
+
+面向对象的意义，不只是把代码封装成类，而是允许环境替换、扩展和参数化。同一个基础环境，可以通过不同 Test 和 Sequence 组合出不同验证场景。
+
+因此，学习 UVM 不能只学组件模板，还需要理解 SystemVerilog 的类、继承、多态、虚方法、参数化类和虚接口。
+
+如果底层语言机制不熟悉，UVM 的工厂、Sequence 和虚拟接口就会出现很多“看起来能用、实际上无法扩展”的问题。
+
+## 27.3 Factory 机制解决的是可替换和可扩展
+
+Factory 让环境通过类型名字创建对象，而不是在代码中到处调用构造函数。
+
+这样做的好处是，同一份环境代码可以创建不同的派生类。测试用例只需要注册和覆盖类型，就能替换 Driver、Transaction 或 Sequence，而不必修改基础环境。
+
+Factory 也是组件复用和项目配置的重要基础。不同项目需要对某个组件进行定制时，可以继承原组件并通过 Factory 覆盖，而不是复制一整份环境。
+
+如果所有对象都直接使用 New 创建，UVM 的工厂机制就失去了意义，平台表面上是 UVM，实际仍然是硬编码结构。
+
+## 27.4 Config\_db 机制解决跨层次配置传递
+
+虚拟接口、工作模式、随机范围、超时参数和数据路径配置，通常需要从 Test 或 Environment 传递到深层组件。
+
+Config\_db 提供了这种跨层次配置能力。发送方设置配置，接收方按层次路径和字段名获取。
+
+它最容易被低估的问题，是路径匹配和设置顺序。路径不匹配时，接收方会拿到默认值，仿真可能仍然正常运行，但验证场景已经悄然偏离。
+
+因此，关键配置应该有统一命名，并在 Build 阶段打印确认。Visual Interface 是否成功传递，更应该有明确检查和错误提示。
+
+能够跑通不代表配置生效。验证环境必须防止“默认值掩盖配置失败”这种情况。
+
+## 27.5 Phase 机制定义验证环境的时间顺序
+
+UVM Phase 将仿真过程划分为构建、连接、运行和报告等阶段。
+
+构建阶段负责创建组件树，连接阶段负责建立组件之间的通信关系，运行阶段负责复位、配置、激励和检查，报告阶段负责汇总结果。
+
+Function Phase 和 Task Phase 的调度方式不同。Connect 阶段需要自底向上建立连接，而运行阶段的多个任务在同一时间维度并行执行。
+
+Phase 让环境组件不必各自决定何时初始化、何时连接、何时结束，而是遵循统一生命周期。
+
+理解 Phase，关键是理解 UVM 组件树。Environment、Agent、Driver、Monitor 和 Scoreboard 都是树上的节点，它们的创建和连接顺序由 Phase 控制。
+
+如果构建和连接关系不清楚，后面的运行错误往往只是表象。
+
+## 27.6 Objection 机制决定仿真什么时候结束
+
+Phase 只能规定执行顺序，不能自动判断某个运行阶段是否还有工作没有完成。
+
+Objection 用来协调 Task Phase 的结束。只有所有需要执行的组件都释放 Objection，仿真才能安全进入下一阶段。
+
+如果 Sequence 已经自动管理 Objection，就不需要重复手动 Raise 和 Drop。如果 Component 在运行阶段执行关键任务，却忘记管理 Objection，仿真可能提前结束，也可能一直挂住。
+
+结束条件应该集中设计。Sequence 负责什么时候发完激励，Scoreboard 和 Monitor 负责什么时候处理完数据，Test 负责超时和整体控制。
+
+把大量延迟散落在 Driver、Monitor 和 Scoreboard 中，会让仿真结束时间变得不可预测，也会掩盖真正的事务处理问题。
+
+## 27.7 Sequence 机制让测试场景可复用、可组合
+
+Sequence 不只是生成 Transaction 的工具，它负责组织测试场景。
+
+基础 Sequence 可以完成一次简单事务，上层 Sequence 可以组合成背靠背传输、异常注入、随机场景和压力场景。
+
+多个 Sequence 可以串行执行，也可以并行运行。Sequencer 负责把 Sequence 产生的事务交给 Driver，Driver 再按照接口时序驱动 DUT。
+
+当平台包含多个接口时，Virtual Sequence 可以协调不同 Agent 上的 Sequence，实现跨接口场景，例如配置寄存器后再启动数据通路，或在传输过程中插入中断。
+
+测试用例与场景逻辑应该分离。Test 负责选择环境和配置 Sequence，具体事务顺序、约束和异常组合交给 Sequence 实现。
+
+如果把所有激励都写在 Test 或 Driver 中，平台的复用能力会迅速下降。
+
+## 27.8 TLM 机制建立事务级通信
+
+TLM 让组件之间传递 Transaction，而不是逐个信号连接。它提升了抽象层次，也降低了组件耦合。
+
+Monitor 通过 Analysis Port 把采样结果发送给 Scoreboard，Reference Model 通过 TLM 连接输出预期结果，Scoreboard 再从不同端口接收数据并完成比较。
+
+TLM 连接需要区分阻塞和非阻塞，以及是否需要 FIFO 缓存。不同类型接口解决的数据流问题不同。
+
+一个重要原则是数据流尽量单向、可解释。输入 Monitor、Reference Model、输出 Monitor 和 Scoreboard 各自保持独立，不能互相替代。
+
+当 Scoreboard 收不到事务时，问题可能不在比较逻辑，而在 Monitor 采样、Analysis Port 连接、FIFO 类型或启动顺序。TLM 让连接更清晰，也让错误更容易沿数据流定位。
+
+## 27.9 RAL 和 Reporting 补齐寄存器与调试能力
+
+寄存器在数字芯片中承担配置、状态记录和数据传递功能。RAL 把 RTL 寄存器映射成抽象模型，提供统一读写接口，并支持寄存器覆盖率。
+
+它可以与 Adapter 和 Predictor 配合，自动跟踪寄存器值。对于包含大量配置寄存器的模块，RAL 能显著减少重复代码，并提高寄存器测试的一致性。
+
+Reporting 机制则解决调试效率。消息包含严重等级，Info 消息还可以设置冗余度，便于在不同调试阶段过滤信息。
+
+批量回归时只保留关键信息和错误，单用例调试时再提高详细度，可以避免日志淹没真正问题。
+
+UVM 的强大不只来自组件，也来自这些基础设施。工厂负责创建，Config\_db 负责传递，Phase 负责调度，Objection 负责结束，Sequence 负责场景，TLM 负责通信，RAL 负责寄存器，Reporting 负责可观测性。
+
+十一、这些机制不是孤立功能，而是一条协作链
+
+如果把 UVM 机制分开学习，很容易把它们记成一张零散清单。实际项目中，它们共同构成环境运行链路。
+
+Factory 负责创建正确类型的组件和对象，Config\_db 在创建和连接阶段传递配置，Phase 控制环境何时建立、连接和运行。
+
+Sequence 在运行阶段组织事务，Sequencer 与 Driver 完成事务级到信号级的转换，Monitor 再把信号还原为事务。
+
+TLM 把事务送往 Reference Model 和 Scoreboard，Objection 决定运行阶段何时结束，Reporting 记录整个过程，RAL 负责寄存器读写与覆盖率。
+
+任何一个环节理解错误，都可能表现为其他环节的故障。例如 Config\_db 路径错误，可能被误认为 Driver 没有驱动；Objection 管理错误，可能被误认为 Sequence 没有发完；TLM 连接错误，可能被误认为 Scoreboard 比较逻辑异常。
+
+因此，调试 UVM 环境时，应该沿着创建、配置、连接、运行和结束这条链路逐段检查，而不是只盯住报错组件。
+
+## 27.10 常见误区是“环境能跑”就等于“平台正确”
+
+第一个误区是只看仿真能不能结束，不看 Sequence 是否真正启动。仿真结束可能只是因为 Objection 提前释放，而不是因为测试真实完成。
+
+第二个误区是只看 Driver 有没有事务，不看 Monitor 是否采样到相同数据。驱动路径和观测路径必须分别验证。
+
+第三个误区是只看 Scoreboard 是否报错，不检查它是否收到足够多的事务。没有数据参与比较时，Scoreboard 自然不会报错。
+
+第四个误区是只看覆盖率数字，不看覆盖点是否对应验证计划。覆盖率高但测试点定义粗糙，仍然无法说明关键功能已验证。
+
+第五个误区是组件很多，但职责重叠。一个 Environment 如果既产生激励又做比较，还负责寄存器配置，后续很难复用和调试。
+
+UVM 平台的质量，最终要看数据流是否独立、控制流是否清晰、配置是否生效、运行是否可控、失败是否可定位。
+
+## 27.11 学习 UVM 的正确路径
+
+第一步是掌握 SystemVerilog 面向对象基础，包括类、继承、多态、虚方法、随机约束和接口。
+
+第二步是理解环境组件职责，知道 Transaction、Sequence、Driver、Monitor、Reference Model、Scoreboard、Agent 和 Environment 如何连接。
+
+第三步是学习核心机制，理解 Factory、Config\_db、Phase、Objection、Sequence、TLM 和 Reporting 分别解决什么问题。
+
+第四步是完成一个小型 DUT 的完整验证闭环，从验证计划、平台搭建、测试用例、覆盖率到回归。
+
+第五步才是抽象成可复用框架，把配置、组件、Sequence 和覆盖率设计成可扩展结构。
+
+只学代码模板，很容易停留在“能跑起来”；理解机制和验证目标，才能逐步做到“能解释、能复用、能定位”。
+
+结语
+
+UVM 不是一堆必须记忆的类，也不是一份不能修改的模板。
+
+它是一套把验证计划、环境组件、测试场景、通信机制、寄存器模型、覆盖率和报告组织起来的工程方法。
+
+Factory 让平台可替换，Config\_db 让配置可传递，Phase 让执行有秩序，Objection 让结束有依据，Sequence 让场景可复用，TLM 让通信更清晰，RAL 让寄存器验证标准化。
+
+掌握这些机制的目的，不是写更多代码，而是让验证环境具备清晰的结构、稳定的生命周期和可解释的结果。
+
+能搭建一套 UVM 平台只是入门，能解释它为什么这样运行，并让它适应不同芯片项目，才算真正掌握 UVM。
+
+---
+
+# 28. [UVM源代码研究] 聊聊UVM源代码里sequence的启动方法
+
+> 来源：https://mp.weixin.qq.com/s/Km7FzDheXXdFsNGXI8NSLA
+> 作者：款款就是飞哥
+> update 2026/09/27 18 : 45
+
+## 28.1 【UVM源代码研究】·基于IEEE 1800.2-2020（Accellera uvm-2020.3.1）源码
+
+## 28.2 引言
+
+之前我们在「UVM源代码研究」这个专题下，陆陆续续聊过 sequence、sequencer 与 driver 之间通信的底层原理，也聊过default\_sequence 与p\_sequencer 的一点思考。在这些文章里，我们其实已经多次“碰”到过 sequence 的启动，但一直没有把它单独拎出来，从源码层面系统地捋一遍：一个 sequence 到底有哪几种启动方式？它们在 UVM 源码里各自走了怎样一条调用链？彼此之间又是什么关系？
+
+带着这两个疑问，今天我们就把 sequence 的启动方法从源码层面掰开揉碎，一次讲透。本文所有代码与行号均以 IEEE 1800.2-2020（Accellera uvm-2020.3.1）源码为准。
+
+**一、先厘清：****sequence****启动的两种典型姿势**
+
+从使用者的角度看，让一个 sequence 跑起来，最常见的是两种写法。
+
+第一种，显式调用 start()：
+
+```
+my_sequence seq = my_sequence::type_id::create("seq");
+seq.start(m_env.m_agent.m_sequencer);
+```
+
+第二种，通过 config\_db 设置 default\_sequence：
+
+```
+uvm_config_db#(uvm_object_wrapper)::set(this,
+                  "env.agent.sequencer.main_phase",                                                     "default_sequence",                                                     my_sequence::type_id::get());
+```
+
+前者是“显式启动”，由我们自己在某个时刻拉起 sequence；后者是“隐式启动”，sequence 随着 phase 的推进被UVM 自动拉起。
+
+看上去是两码事，但如果我们顺着源码往下追，会发现它们最后都汇聚到了同一个地方——uvm\_sequence\_base::start() 这个 task。换句话说，default\_sequence机制不过是给start() 套了一层“自动挡”的外壳。下面我们分别来看。
+
+**二、显式启动：****uvm\_sequence\_base::start()****源码全解析**
+
+start() 的完整签名如下（src/seq/uvm\_sequence\_base.svh，第 301 行）：
+
+// src/seq/uvm\_sequence\_base.svh : 301-304
+
+```
+virtual task start (uvm_sequencer_base sequencer,
+                    uvm_sequence_base parent_sequence = null,                                       int this_priority = -1,                                       bit call_pre_post = 1);
+```
+
+四个参数：sequencer 指定在哪个 sequencer 上跑；parent\_sequence 指定父 sequence（为 null 说明自己是根 sequence）；this\_priority 指定优先级（默认取父 sequence 的优先级，根 sequence 默认 100）；call\_pre\_post 控制是否调用 pre\_body/post\_body。start() 内部我们挑几个关键点来看。
+
+**（****1****）绑定执行上下文：****set\_item\_context()**
+
+start() 一进来干的第一件事，就是调set\_item\_context(parent\_sequence, sequencer)（第307行）。这个函数定义在src/seq/uvm\_sequence\_item.svh 第 127 行，做的事情其实就是三件：设置父 sequence、设置 sequencer、然后 reseed()。其中最关键的是 set\_sequencer()（第 194 行）：
+
+// src/seq/uvm\_sequence\_item.svh : 194-197
+
+```
+virtual function void set_sequencer(uvm_sequencer_base sequencer);
+    m_sequencer = sequencer;       m_set_p_sequencer();endfunction
+```
+
+这里除了把 m\_sequencer 存下来，还顺手调了 m\_set\_p\_sequencer()。这个函数在基类里是个空函数，真正生效的是我们在sequence 里声明的`uvm\_declare\_p\_sequencer 宏（src/macros/uvm\_sequence\_defines.svh 第 315 行）：
+
+// src/macros/uvm\_sequence\_defines.svh : 315-322
+
+```
+`define uvm_declare_p_sequencer(SEQUENCER) \
+SEQUENCER p_sequencer;\  virtual function void m_set_p_sequencer();\       super.m_set_p_sequencer(); \        if( !$cast(p_sequencer, m_sequencer)) \               `uvm_fatal("DCLPSQ", \                $sformatf("%m %s Error casting p_sequencer, please verify that this sequence/sequence item is intended to execute on this type of sequencer", get_full_name())) \endfunction
+```
+
+看到没有——所谓的 p\_sequencer，本质就是在这个被 override 的 m\_set\_p\_sequencer() 里，把 m\_sequencer 用 $cast 转成我们自定义的类型化句柄。所以“p\_sequencer 为什么能用”这个问题的答案，源头就藏在这里：启动时 set\_sequencer() 一调，类型转换就发生了；万一 cast 失败（sequencer类型不匹配），直接uvm\_fatal("DCLPSQ", ...) 报错。
+
+**（****2****）防重入与优先级处理**
+
+接着是一段防御性代码（第 309-339 行）。先通过m\_sequence\_state\_mutex.try\_get(1) 这个信号量判断 sequence 是否已经启动过——一旦拿不到锁，说明它已经在跑了，直接 uvm\_report\_fatal("SEQ\_NOT\_DONE", "already started") 报错退出。这也就解释了我们平时踩的坑：一个 sequence 对象不能 start() 两次。
+
+然后是优先级处理：this\_priority 传 -1（或不传）时，根 sequence 默认 100，子sequence 则继承父sequence 的优先级；如果传了小于-1 的非法值，直接uvm\_report\_fatal("SEQPRI", ...) 报错。最后 clear\_response\_queue() 把上次运行残留的 response 队列清空，避免脏数据串到下轮。
+
+// src/seq/uvm\_sequence\_base.svh : 309-339（节选）
+
+```
+    if (m_sequence_state_mutex.try_get(1) == 0) begin
+      uvm_report_fatal("SEQ_NOT_DONE",         {"Sequence ", get_full_name(), " already started"},UVM_NONE);    end    m_parent_process_guard = new("uvm_sequence_base::start_guard", this);    if (m_parent_sequence != null) begin      m_parent_sequence.children_array[this] = 1;    end    if (this_priority < -1) begin      uvm_report_fatal("SEQPRI", $sformatf("Sequence %s start has illegal priority: %0d",                                           get_full_name(),                                           this_priority), UVM_NONE);    end    if (this_priority < 0) begin      if (parent_sequence == null) begin        this_priority = 100;      end      else begin        this_priority = parent_sequence.get_priority();      end    end    // Check that the response queue is empty from earlier runs    clear_response_queue();    m_priority           = this_priority;
+```
+
+**（****3****）注册到****sequencer****：****m\_register\_sequence()**
+
+紧接着（第 357-359 行），如果 m\_sequencer 非空，就调m\_sequencer.m\_register\_sequence(this)，把自己登记到 sequencer 上。这个函数定义在 src/seq/uvm\_sequencer\_base.svh 第 527 行：
+
+// src/seq/uvm\_sequencer\_base.svh : 527-538
+
+```
+function int uvm_sequencer_base::m_register_sequence(uvm_sequence_base sequence_ptr);
+    if (sequence_ptr.m_get_sqr_sequence_id(m_sequencer_id, 1) > 0) begin           return sequence_ptr.get_sequence_id();      end    sequence_ptr.m_set_sqr_sequence_id(m_sequencer_id, g_sequence_id++);    reg_sequences[sequence_ptr.get_sequence_id()] = sequence_ptr;      return sequence_ptr.get_sequence_id();endfunction
+```
+
+它的作用，是给当前 sequence 分配一个全局递增的 sequence\_id，并把它塞进 sequencer 的 reg\_sequences 关联数组里。这个 reg\_sequences 就是 sequencer 用来追踪“当前有哪些sequence 在跟自己交互”的账本——后面 driver 的 get\_next\_item、response 的回传，都要靠这个 sequence\_id 把 response 送回正确的 sequence。
+
+**（****4****）状态机推进：整个****start()****的灵魂**
+
+接下来是 start() 里最核心的一段（第 361-420 行）——一个 fork...join 里，用 m\_sequence\_state 这个状态变量，把 sequence 的整个生命周期串了起来：
+
+// src/seq/uvm\_sequence\_base.svh : 361-420（节选）
+
+```
+    // Change the state to PRE_START, do this before the fork so that
+    // the "if (!(m_sequence_state inside {...}" works    m_sequence_state = UVM_PRE_START;    fork      begin        m_sequence_process = process::self();
+        // absorb delta to ensure PRE_START was seen        #0;
+        // Raise the objection if enabled        // (This will lock the uvm_get_to_lock_dap)        if (get_automatic_phase_objection()) begin          m_safe_raise_starting_phase("automatic phase objection");        end
+        pre_start();
+        if (call_pre_post == 1) begin          m_sequence_state = UVM_PRE_BODY;          #0;          pre_body();        end
+        if (parent_sequence != null) begin          parent_sequence.pre_do(0);    // task          parent_sequence.mid_do(this); // function        end
+        m_sequence_state = UVM_BODY;        #0;        body();
+        m_sequence_state = UVM_ENDED;        #0;
+        if (parent_sequence != null) begin          parent_sequence.post_do(this);        end
+        if (call_pre_post == 1) begin          m_sequence_state = UVM_POST_BODY;          #0;          post_body();        end
+        m_sequence_state = UVM_POST_START;        #0;        post_start();
+        // Drop the objection if enabled        if (get_automatic_phase_objection()) begin          m_safe_drop_starting_phase("automatic phase objection");        end
+        m_sequence_state = UVM_FINISHED;        #0;
+      end    join
+```
+
+整个状态流可以概括为：UVM\_PRE\_START → (pre\_start) → UVM\_PRE\_BODY → (pre\_body) → UVM\_BODY → (body) → UVM\_ENDED → UVM\_POST\_BODY → (post\_body) → UVM\_POST\_START → (post\_start) → UVM\_FINISHED。每个状态切换之间都垫了一个 #0（吸收 delta 延时，确保上一个状态被别的进程看到），然后在对应状态里调用对应的回调。
+
+这里有几个值得注意的细节。其一，body() 是我们最熟悉的——所有 `uvm\_do\_\* 宏、start\_item/finish\_item都发生在body() 里，而body() 被包裹在pre\_body 和post\_body 之间，是否调用它们由call\_pre\_post 参数决定（默认1）。其二，如果传了parent\_sequence，那么在body() 前后还会额外调parent\_sequence 的pre\_do()、mid\_do()、post\_do()——这就是父 sequence 能“感知”子 sequence 执行进度的原因。其三，自动 objection 的 raise/drop 也发生在这条链上：开启了自动 objection（get\_automatic\_phase\_objection()）时，pre\_start 之前 raise，post\_start之后drop——这就是我们常说的“sequence自动objection”的落点。
+
+**（****5****）善后：****end\_tr****、清理与****kill****保护**
+
+body() 跑完之后（第422-468 行），start()还做了一堆善后工作：如果中途被 kill，会等kill 流程走完；如果发现子进程是被一个“意外的disable fork”干掉、而非正常结束，会打一条SEQBDYZMB 的warning 并自动补一个kill()；最后调m\_sequencer.end\_tr(this) 结束 transaction 记录，clean\_exit\_sequence() 清理 sequencer 上残留的队列，并从父 sequence 的 children\_array 里把自己摘掉。到这里，手动 start() 这条主线就走完了。 
+
+// src/seq/uvm\_sequence\_base.svh : 422-468（节选）
+
+```
+   m_sequence_process = null;
+    // If we're being killed, wait for that to complete    if (m_killing_process != null) begin      fork : kill_guard        begin          fork            begin              wait (m_killing_process == null); // Kill proceeded without issue            end            begin              m_killing_process.await(); // Killing process was killed (likely a "this.kill()")              m_killed(); // We have to finish the kill() in this case            end          join_any          disable fork;        end      join : kill_guard    end    if ((m_sequence_state != UVM_FINISHED) &&        (m_sequence_state != UVM_STOPPED)) begin      `uvm_warning("SEQBDYZMB",                   $sformatf("The child process forked by start() on sequence '%s' was terminated without killing the sequence, perhaps by an errant \"disable fork.\"  The kill() method is being automatically triggered.", get_full_name()))      this.kill();    end    if (m_sequencer != null) begin      m_sequencer.end_tr(this);    end    // Clean up any sequencer queues after exiting; if we    // were forcibly stopped, this step has already taken place    if (m_sequence_state != UVM_STOPPED) begin      clean_exit_sequence();    end        #0; // allow stopped and finish waiters to resume    if ((m_parent_sequence != null) && (m_parent_sequence.children_array.exists(this))) begin      m_parent_sequence.children_array.delete(this);    end    old_automatic_phase_objection = get_automatic_phase_objection();    m_init_phase_daps(1);    set_automatic_phase_objection(old_automatic_phase_objection);
+```
+
+**三、隐式启动：****default\_sequence****的自动挡外壳**
+
+再来看第二种。当我们通过 config\_db 把 default\_sequence 塞进某个 sequencer 的某个 phase 后，UVM是在哪里、又是在什么时机把它start 起来的？
+
+答案在src/base/uvm\_task\_phase.svh 里。task phase（比如 main\_phase、run\_phase）在遍历组件树的时候，对每个组件都会经历 UVM\_PHASE\_STARTED → UVM\_PHASE\_EXECUTING → … → UVM\_PHASE\_ENDED 这几个状态。其中（第 117-126 行）：
+
+// src/base/uvm\_task\_phase.svh : 117-126
+
+```
+        UVM_PHASE_STARTED: begin
+          comp.m_current_phase = phase;          comp.m_apply_verbosity_settings(phase);          comp.phase_started(phase);          if ($cast(seqr, comp)) begin
+            seqr.start_phase_sequence(phase);          end
+        end
+```
+
+可以看到，当这个组件恰好是一个 sequencer（$cast(seqr, comp) 成功）时，就会在 phase 刚STARTED 的时候调用seqr.start\_phase\_sequence(phase)；而到了 UVM\_PHASE\_ENDED（第 139-143 行），又会调 seqr.stop\_phase\_sequence(phase) 把还在跑的 default sequence kill 掉。
+
+// src/base/uvm\_task\_phase.svh : 139-143
+
+```
+        UVM_PHASE_ENDED: begin
+          if ($cast(seqr, comp)) begin            seqr.stop_phase_sequence(phase);          end
+```
+
+**（****1****）从资源池里捞出****default\_sequence**
+
+start\_phase\_sequence() 的实现位于 src/seq/uvm\_sequencer\_base.svh 第 1407 行，我们挑重点看。第一步是去资源池里 lookup：
+
+// src/seq/uvm\_sequencer\_base.svh : 1415-1417
+
+```
+ rq = rp.lookup_name({get_full_name(), ".", phase.get_name(), "_phase"},
+                      "default_sequence", null, 0);  uvm_resource_pool::sort_by_precedence(rq);
+```
+
+它先从 uvm\_resource\_pool 里，按“组件名.phase名\_phase”这个 scope，去lookup 名为“default\_sequence” 的资源。这正是我们config\_db::set 时那两个字符串的来历：scope就是"env.agent.sequencer.main\_phase"，名字就是 "default\_sequence"。
+
+捞出来后，UVM 会区分两种类型（第 1419-1458 行）：如果是uvm\_resource#(uvm\_sequence\_base)，说明用户塞的是一个具体的 sequence 实例，直接读出来用（优先级更高，因为它更具体）；如果是 uvm\_resource#(uvm\_object\_wrapper)，说明塞的是 type\_id::get() 这样的“类型壳子”，就通过 factory 的 create\_object\_by\_type() 现场 new 出一个 sequence 实例（第 1450 行）。两者都捞不到，就打一条 PHASESEQ 的 UVM\_FULL 信息，说明这个 phase 没有default sequence，然后return。
+
+// src/seq/uvm\_sequencer\_base.svh : 1419-1458
+
+```
+ for (int i = 0; seq == null && i < rq.size(); i++) begin
+    uvm_resource_base rsrc = rq.get(i);    uvm_resource#(uvm_sequence_base)  sbr;    uvm_resource#(uvm_object_wrapper) owr;    // uvm_config_db#(uvm_sequence_base)?    // Priority is given to uvm_sequence_base because it is a specific sequence instance    // and thus more specific than one that is dynamically created via the    // factory and the object wrapper.    if ($cast(sbr, rsrc) && sbr != null) begin      seq = sbr.read(this);      if (seq == null) begin        `uvm_info("UVM/SQR/PH/DEF/SB/NULL", {"Default phase sequence for phase '",        phase.get_name(),"' explicitly disabled"}, UVM_FULL)        return;      end    end    // uvm_config_db#(uvm_object_wrapper)?    else if ($cast(owr, rsrc) && owr != null) begin      uvm_object_wrapper wrapper;      wrapper = owr.read(this);      if (wrapper == null) begin        `uvm_info("UVM/SQR/PH/DEF/OW/NULL", {"Default phase sequence for phase '",        phase.get_name(),"' explicitly disabled"}, UVM_FULL)        return;      end      if (!$cast(seq, f.create_object_by_type(wrapper, get_full_name(),      wrapper.get_type_name()))      || seq == null) begin        `uvm_warning("PHASESEQ", {"Default sequence for phase '",        phase.get_name(),"' %s is not a sequence type"})        return;      end    end  end
+```
+
+**（****2****）配置、随机化、然后****——****殊途同归**
+
+拿到 seq 之后，做了一串准备动作：print\_sequence\_info 置 1、set\_sequencer(this)、reseed()、set\_starting\_phase(phase)、randomize()……最后，落在最关键的一段（第 1480-1491 行）：
+
+// src/seq/uvm\_sequencer\_base.svh : 1480-1491
+
+```
+  fork begin
+      uvm_sequence_process_wrapper w = new();      // reseed this process for random stability      w.pid = process::self();      w.seq = seq;      w.pid.srandom(uvm_create_random_seed(seq.get_type_name(), this.get_full_name()));      m_default_sequences[phase] = w;      // this will either complete naturally, or be killed later      seq.start(this);      m_default_sequences.delete(phase);    end  join_none
+```
+
+看，绕了一大圈，default\_sequence 机制最终还是调用了我们上一节分析的 start()，只不过这次 sequencer 参数传的是 this（也就是 sequencer 自己），而且是包在一个 fork...join\_none 里、记录到m\_default\_sequences[phase] 这张表里异步启动的。这样一来，phase 不会因为sequence 的阻塞而卡住；二来，stop\_phase\_sequence()在phase 结束时也能按图索骥地把它们一一 kill 掉。
+
+**四、总结**
+
+聊到这里，我们把 sequence 的两种启动方式从源码层面完整地串了一遍。总结如下：
+
+1. sequence 的启动最终只有一条主线，就是 uvm\_sequence\_base::start()。显式的 seq.start(sequencer) 是直接走这条线；隐式的 default\_sequence 机制则是套了一层“自动挡”外壳后，最终也调 start(this)。
+
+2. start() 的核心，是一段用 m\_sequence\_state 状态机 + fork...join 串起来的状态推进：PRE\_START → PRE\_BODY → BODY → ENDED → POST\_BODY → POST\_START → FINISHED，并在对应状态回调pre\_start/pre\_body/body/post\_body/post\_start，以及父 sequence 的 pre\_do/mid\_do/post\_do。
+
+3. 启动时绑定的执行上下文（父sequence、sequencer、p\_sequencer）由 set\_item\_context() 完成；sequence 与 sequencer 的“上户口”由 m\_register\_sequence() 完成——它分配的 sequence\_id 是后面 response 回传、driver 通信的锚点。
+
+4. default\_sequence 的自动启动，由 task phase 的遍历（uvm\_task\_phase）在 UVM\_PHASE\_STARTED 时触发 start\_phase\_sequence()，从资源池按“组件.phase\_phase”的 scope 捞出 default\_sequence，支持 uvm\_sequence\_base 实例和 uvm\_object\_wrapper 类型壳子两种形式，最终 fork...join\_none 异步 start。
+
+至于 sequence 真正跑起来之后，body() 里的start\_item/finish\_item 是如何跟 sequencer 的仲裁、driver 的get\_next\_item 串成一条链的，那就是另一个故事了——后续我们会就sequencer 的仲裁机制专门展开讨论，敬请期待。
+
+---
+
+# 29. UVM reset：如何安全终止 outstanding transaction
+
+> 来源：https://mp.weixin.qq.com/s/T7FXbzTMpLdtI0XHmJk1gQ
+> 作者：周漾
+> update 2026/09/27 18 : 46
+
+reset 不只是把接口信号拉回默认值。那些正在等 ready、response 或 arbitration grant 的 transaction，也会被它打断。driver、sequence 和 scoreboard 对这件事只要理解得不一样，问题往往不会当场暴露，而会在后面的 unknown response、重复 compare 或 pending timeout 中暴露。
+
+## 29.1 一些语义
+
+outstanding transaction 指已经 issued、accepted 或登记为 pending、但尚未完成 response 的 request。[AXI Outstanding 机制详解——总线为什么允许"欠着债"发请求](https://mp.weixin.qq.com/s?__biz=MzcwOTM2NDg5NA==&mid=2247483855&idx=1&sn=7d079e0e6b71e351136ca61e1553ea0e&scene=21#wechat_redirect)CANCEL 表示这笔 request 不再产生正常结果；FAIL\_RESPONSE 让 sequence 收到一个明确失败；RETRY 则在 reset 后重新发送。三种 policy 都能用，前提是整套环境说的是同一种语义。
+
+![reset 与 transaction 生命周期](UVM_AI_assets/image-0187.png)
+
+图 1：reset 可发生在仲裁、driver 协议等待或 response 返回任一阶段。
+
+常见的 reset 顺序是：driver 先 `clear_signals`，再清内部 queue 和状态；当前 request 是取消、返回失败还是重试，由协议层的约定决定。scoreboard 也要同步清掉 pending，避免 reset 前的 expected 和 reset 后的 actual 配在一起。
+
+![reset 清理代码](UVM_AI_assets/image-0188.png)代码图 1：reset 同时撤销 valid、清 lane queue 与 pending table；当前 request 必须按明确定义取消或返回失败。
+
+只清接口 valid 远远不够。sequencer 还在等 `item_done`，sequence 就会卡住；`pending_by_id` 没清，后续 response 就可能命中旧 entry；coverage 若不区分被 reset 打断的事务，还会把不存在的协议完成算进去。
+
+## 29.2 reset 不是一个动作，而是一组 state transition
+
+reset 期间要做的事可以归为三类。输入先停下来：driver 撤销 valid、ready 或其他 drive，monitor 将正在组包的 transaction 标成无效，sequencer 不再放新 request 进入协议层。随后清掉 outstanding state，包括 outstanding counter、按 ID 管理的 pending table、每条 lane 的 request queue、predicted response queue 和临时 event queue。等 reset deassert 后再恢复接收，并确保新 request 不会配到 reset 前遗留的 response。
+
+复杂环境里的 outstanding 往往不止一个总数，还会分成 all、read、write 等计数。只清总数、漏掉 read/write 子计数，reset 后的 credit 或资源管理就会判断错。同样，只清 scoreboard 的 expected queue，却没清 driver 的 retry queue，也可能让旧 request 在 reset 后又被发一次，最后留下难以解释的重复访问。
+
+![outstanding 与 pending 同步清理](UVM_AI_assets/image-0189.png)
+
+代码图 2：reset 同时清 outstanding 计数、按 ID 的 pending table 与 expected queue；这些状态必须一起归零。
+
+reset 解除后，任何 outstanding 或 pending entry 都必须说得清来源。默认策略是全部清空；协议若要求保留并重试，就给重试 request 分配新的 epoch 或 generation，别再用旧 ID，让旧 response 和新 request 混在一起。
+
+![](UVM_AI_assets/image-0190.png)图 2：reset 是 transaction 生命周期的一条终止边，不是 driver 的局部动作。
+
+## 29.3 reset 与 flush/event handler 的关系
+
+环境里常常还会有单独的 flush 或 event handler。它们暂存等待触发的 request、已经发出但尚未确认的 event，以及被 hold 条件挡住的 transaction。reset 若只通知 driver，没通知这些 handler，旧 event 就可能在 reset 解除后被推入新一轮队列，看上去像“凭空多出一笔 response”。
+
+![handler queue 与 hold flag 清理](UVM_AI_assets/image-0191.png)
+
+代码图 3：reset 清空 event、pending、delayed queue，并复位 hold flag；运行线程只在 hold 解除且 delayed queue 非空时转移 transaction。
+
+`hold flag` 是 flow-control state，不是 reset 的替代品。它用来暂缓某类 event 或 completion；reset 时必须明确它是复位为允许，还是继续保持。reset 后 hold 仍为真、又没有 `wait_modified` 或恢复 event，queue 就会一直积压；reset 前的 delayed queue 没清、hold 却解除了，旧 event 又会突然出现在新周期。因此 reset handler 的日志里最好同时带上 queue size、hold 值和 reset epoch。
+
+## 29.4 reset policy 要在各组件间对齐
+
+reset 时通常只有三种处理：取消、返回失败 response，或重试。reset 让请求彻底失效时，取消最直接，driver 清信号后让 sequence 知道这个 item 已结束。上层需要明确知道“这笔请求没成功”时，返回失败 response 更合适：response 继承 request ID，status 标记为 reset abort。协议允许恢复后重放时可以重试，但要确认重复访问不会产生副作用，并且 retry queue 和 scoreboard 都把它当成一条新的生命周期。
+
+![reset 取消策略](UVM_AI_assets/image-0192.png)代码图 4：CANCEL、FAIL\_RESPONSE、RETRY 三种 policy 分别处理当前 request；每种 policy 都必须结束 sequencer 等待并同步 scoreboard state。
+
+driver 选择 CANCEL，scoreboard 却还在等正常 response，肯定会留下悬挂状态。sequence 已经收到失败 response，coverage 又把它采样为成功完成，同样不对。reset policy 要放在 cfg 或明确的 test 场景里，让 driver、monitor、predictor、scoreboard 和 sequence 看到同一种结果。
+
+## 29.5 reset 发生位置决定需要验证什么
+
+reset 落在不同位置，要看的事情也不同。在 `start_item` 等待时发生，要确认 sequence 能从仲裁或等待中退出，reset 后不会继续交付旧 item。driver 已 `get_next_item` 但还没驱动时发生，要确认 driver 只走一次取消路径，不会重复 `item_done`。busy/ready 等待期间发生，则看 valid 是否按约定周期撤销。若是在等待 response 时发生，重点变成 pending entry 怎么结束，以及迟到 response 是丢弃还是标成 stale。
+
+多 lane 或多 agent 环境还要确认 reset 的范围。一个 lane reset 不该顺手清掉另一 lane 的 pending；全局 reset 则要让所有 lane 的 queue、counter 和 handler 一起归零。这个范围一旦弄错，波形上 reset 明明已经拉起，部分状态却没清，错误就会在后续 traffic 里随机冒出来。
+
+## 29.6 reset deassert 后不是立刻恢复 traffic
+
+旧 state 清干净，不代表新 transaction 已能安全发出。init sequence 通常要先恢复 address window、base/limit 或其他 resource configuration，再恢复 memory/master enable 等访问许可；等 `init_done`、outstanding 为零或约定的 ready 条件满足后，才启动普通 traffic。顺序反过来，driver 可能把 request 送到还没准备好的接口，首次 transaction 的失败便只会在特定 reset 时序下出现。
+
+![reset 后 re-initialization 顺序](UVM_AI_assets/image-0193.png)
+
+代码图 5：post-reset sequence 先恢复 address/resource configuration，再恢复 enable，最后等待 init 和 outstanding 都满足完成条件。
+
+`outstanding == 0` 在这里不是性能计数，而是恢复屏障的一部分：上一轮 transaction 已经被 cancelled、failed 或 drain，不会再和新的 initialization request 混在一起。环境若支持多个 function 或 lane，就按 reset scope 只等待受影响范围的 outstanding；全局等待会多出无谓阻塞，局部等待又可能漏掉共享 response path 的残留。
+
+## 29.7 用 reset epoch 识别迟到 response
+
+仅靠清 `pending_by_id` 能发现 unknown response，但无法区分“完全非法 response”和“reset 前合法 request 的迟到结果”。实际环境可维护 `reset epoch`：每次 reset assert 时递增 generation；request/response 都携带或关联当前 epoch。response 到来时，epoch 不同则作为 stale response 记录并丢弃，epoch 相同才进入正常 ID 匹配。
+
+![reset epoch 与 stale response](UVM_AI_assets/image-0194.png)代码图 6：reset assert 递增 epoch 并清 pending；response 的 epoch 不匹配时作为 stale response 处理，不允许匹配新 request。
+
+epoch 不一定是硬件协议字段，也可以只存在于 monitor/scoreboard 的 metadata 中。关键是每个 request 在登记 pending 时记住当前 reset generation，response 到来时用同一个 generation 检查。这样 reset 后复用相同 ID 的新 request 也不会被旧 response 错误完成。
+
+## 29.8 读懂 reset 输出
+
+![reset 输出](UVM_AI_assets/image-0195.png)
+
+输出图 1：健康 reset 先撤销接口、报告被取消 ID、清 queue/counter，再接受新 request；旧 response 到来时被识别为 stale。
+
+日志的先后顺序很有信息量。新 request 已经 accepted，旧 pending 却还在，新旧 ID 就有混在一起的风险。old response 没有标成 stale，反而直接送进 scoreboard，则多半是 reset epoch 或 pending 清理少了一步。每条 reset 日志都带上 reset generation、取消 request 数、各类 pending queue size 和 outstanding counter，状态有没有清干净会直观很多。
+
+## 29.9 DV 检查点
+
+覆盖 reset 发生在 `start_item` 等待、driver 已领取、busy 等待、response 等待这四个位置。reset 后 valid 必须在定义周期内撤销；pending 要么归零，要么全部收到失败 response；新 transaction 不能和 reset 前的 ID 或状态串扰。
+
+还可以建立 reset conservation check：reset 前已 accepted 的 request，到了 reset 后必须归到 completed、cancelled 或 retry 之一，不能悄悄消失；每个 response 也只能对应当前 reset generation 的 pending request。coverage 交叉 reset 类型、发生时的 transaction phase、请求方向、是否有 outstanding、是否有 delayed event，才更容易抓住“response 正好回来的同一拍发生 reset”这类 race。
+
+## 29.10 排查顺序
+
+![reset 调试](UVM_AI_assets/image-0196.png)图 3：从接口信号、sequencer pending、scoreboard pending、response ID 四层确认 reset 是否清干净。
+
+## 29.11 排查时最容易混淆的点
+
+## 29.12 为什么 reset 后还会出现 response ID 不匹配？
+
+常见原因是旧 pending 没清，或旧 driver 线程在 reset 后仍返回了 response。driver、sequence 和 scoreboard 必须用同一套取消或失败规则。
+
+## 29.13 reset 时一定要调用 `item_done` 吗？
+
+这取决于 reset policy，但不能让 sequencer 永远等下去。可以调用 `item_done` 并返回 failure response，也可以使用环境定义的 abort mechanism；关键是所有层对它的含义一致。
+
+为什么 reset 后还要区分 stale response 和 unknown response？
+
+stale response 是 reset 前已知 request 的迟到结果，通常按 reset epoch 丢弃并记录；unknown response 则没有任何已知来源，可能是协议错误、重复发送或 monitor 组包出了问题。两者都不能拿来匹配新 request，但排查方向不同。
+
+## 29.14 为什么 hold flag 要在 reset 中单独处理？
+
+hold flag 决定 delayed queue 能不能继续发送。只清 queue、不复位 hold，reset 后的新 event 会一直走不动；只复位 hold、不清 queue，reset 前的旧 event 就可能在新周期突然发出。
+
+## 29.15 小结
+
+把 reset 当作 transaction 生命周期的一条终止边，并一起清理接口、driver queue、sequencer 等待和 scoreboard pending，才能避免旧状态在 reset 结束一段时间后才暴露成错误。
+
+---
+
+# 30. item_done 到底完成了什么？从 AXI VIP 看懂 UVM 握手机制
+
+> 来源：https://mp.weixin.qq.com/s/Gr89L8ek-PZOAGoU6yF_oQ
+> 作者：吉米儿
+> update 2026/09/27 18 : 53
+
+很多人第一次写 UVM Driver，都会记住这三行：
+
+```
+seq_item_port.get_next_item(req);
+drive_transaction(req);seq_item_port.item_done();
+```
+
+取到请求、驱动总线、通知完成，看起来很顺。
+
+但当我们开始使用支持 outstanding 的 AXI VIP，问题就来了：如果每次都要等上一笔事务彻底结束，下一笔才能发送，多笔 outstanding 又是怎么产生的？
+
+这个疑问的核心不在 AXI，而在于我们如何理解 item\_done() 中的“done”。
+
+## 30.1 从 AXI VIP 的一段代码说起
+
+下面摘取一个 reorder sequence 的关键结构。为便于阅读，省略约束和版本兼容分支，只保留发送与等待的关系：
+
+```
+// 先连续投递写事务
+for (int i = 0; i < sequence_length; i++) begin  `uvm_do(write_tran[i])end// 再逐笔等待事务结束for (int i = 0; i < sequence_length; i++) begin  write_tran[i].wait_for_transaction_end();end
+```
+
+原示例把第一笔写事务设为 ID 0，其余设为 ID 1，意图是为跨 ID 的响应重排序创造条件。
+
+值得注意的是：发送循环并没有使用 fork，而是顺序执行多个 uvm\_do。
+
+那么，uvm\_do 返回时，到底是什么完成了？是 Driver 已经确认当前请求，还是总线已经收到最终响应？
+
+先记住本文的结论：UVM 请求握手完成，不必等于总线事务完成。 至于两者在某个商业 VIP 中如何对应，需要以该版本的接口约定为准，不能只凭 sequence 反推内部源码。
+
+## 30.2 拆开 uvm\_do 找到真正的等待点
+
+当宏的参数是 sequence item 时，可以把它的主要流程理解为：
+
+```
+req = transaction::type_id::create("req");
+start_item(req);          if (!req.randomize())            `uvm_fatal("RAND", "Randomization failed")          finish_item(req);
+```
+
+这不是完整宏展开，但足以看清主线：start\_item()申请仲裁授权，随机化准备请求内容，finish\_item()提交请求并等待确认。
+
+如果进一步抽出 finish\_item()中与握手相关的关键动作，就是：
+
+```
+// 原理示意，省略回调、记录与参数检查
+sequencer.send_request(this, item);sequencer.wait_for_item_done(this, -1);
+```
+
+也就是说，“请求已经提交”不等于“finish\_item 已经返回”。 发送之后，Sequence 仍然要等当前请求的完成通知；而 start\_item()也可能因等待仲裁授权而阻塞。UVM sequence item 执行流程
+
+![](UVM_AI_assets/image-0197.png)
+
+图1：以 get\_next\_item / item\_done 接口为例。图示是一种正常执行顺序，不是各调用的唯一启动顺序。
+
+Driver 调用 get\_next\_item(req)取得请求后，当前 request 仍保留在 Sequencer 中。调用 item\_done()，才会移除当前 request，并通知等待它的 Sequence。随后 finish\_item()完成剩余收尾流程并返回，宏才能继续往下执行。UVM Sequencer 接口参考
+
+因此，item\_done()既不是直接调用 Sequence 的某个方法，也不是一个总线信号。它通过 Sequencer 完成请求确认和等待通知。
+
+## 30.3 done 的位置 决定了怎样的发送节奏
+
+串行 Driver 等总线做完再确认
+
+最常见的入门写法是：
+
+```
+forever begin
+  seq_item_port.get_next_item(req);  drive_and_wait_for_response(req);  seq_item_port.item_done();end
+```
+
+这里，drive\_and\_wait\_for\_response()是示意任务，表示一直等待总线最终响应。
+
+对于这个 Driver，以及逐笔调用 uvm\_do的同一个 Sequence，前一笔尚未完成，下一笔就无法提交。UVM 请求确认与总线完成在这里被安排到了一起。
+
+这没有问题，只是它不适合用同一发送循环建立多笔 outstanding。
+
+流水 Driver 先接管请求 再在后台推进
+
+另一种合法设计，是由 Driver 先把请求交给内部调度器，再结束当前 UVM 请求握手：
+
+```
+// 接收线程，概念伪代码
+forever begin  seq_item_port.get_next_item(req);// 保存请求信息，确认内部有能力继续处理  enqueue_request(req);  seq_item_port.item_done();end// 另有后台线程推进总线，并管理未完成事务
+```
+
+此时，Sequence 可以继续投递下一笔，而前面的事务仍在后台执行。图2对比了两种安排。
+
+![](UVM_AI_assets/image-0198.png)
+
+图2：横条表示事务持续时间，不表示 WDATA beat 相互交织；菱形为提前的 item\_done，圆点为总线事务完成。
+
+要特别强调：提前调用 item\_done()，不会自动把 Driver 变成流水线。
+
+如果调用后仍在同一个接收线程里等待全部响应，等做完才去取下一笔，总线依旧可能串行。还需要内部队列、并行处理、容量控制，以及尚未完成请求的正确关联。
+
+同样，多笔 outstanding 只是乱序返回的前提，不代表一定发生乱序。是否能观察到跨 ID 重排序，还取决于 DUT、Slave 和相关配置。同 ID 的写响应仍必须保持请求顺序。Arm 事务顺序说明
+
+## 30.4 item\_done 和 put\_response 各管什么
+
+很多教程先写：
+
+```
+seq_item_port.put_response(rsp);
+seq_item_port.item_done();
+```
+
+因此我们很容易把这两件事当成一个固定流程。其实它们解决的是不同问题：
+
+| 操作 | 主要作用 |
+| --- | --- |
+| item\_done() | 完成当前 REQ 握手，通知等待请求确认的 Sequence |
+| put\_response(rsp) | 将响应对象送回对应 Sequence |
+| item\_done(rsp) | 在一次调用中完成请求确认并返回响应 |
+| get\_response(rsp) | Sequence 从自身响应队列取得响应 |
+
+ 
+
+可以把它们理解为两句话：item\_done()告诉 Sequence“当前请求握手结束了”；response 则告诉它“这里有一份返回信息”。
+
+![](UVM_AI_assets/image-0199.png)
+
+图3：请求确认和响应返回可以分开；不能只发 response 而漏掉 get\_next\_item 对应的 item\_done。
+
+所以，先 put\_response()再 item\_done()是合法安排，但不是固定顺序。异步 Driver 也可以先确认请求，稍后再发送响应。已经使用 item\_done(rsp)返回过同一个响应，就不要再额外 put\_response(rsp)一次。UVM 请求与响应接口
+
+这里还存在一个容易忽略的条件：如果 Sequence 每次发送后立即 get\_response()，并等到最终响应才发下一笔，即使 Driver 提前确认了请求，这个 Sequence 仍然会把自己串行化。
+
+VIP 示例中的后台响应回收线程，正好把“持续发请求”和“持续收响应”分开了：
+
+```
+fork
+  forever begin    get_response(rsp);  endjoin_none
+```
+
+它在队列为空时阻塞，有响应时取出；但仅取出对象并不等于检查响应正确，也不等于确认本轮全部事务完成。测试仍须有明确的完成条件，并管理好仿真与线程生命周期。UVM get\_response 说明
+
+## 30.5 分离响应以后 靠什么找回原请求
+
+既然 response 可以晚于 item\_done()，当 Driver 返回响应时，Sequencer 可能已经在处理别的 request。它靠什么知道响应属于谁？
+
+答案不是“当前 request”，而是响应对象携带的身份信息：
+
+```
+rsp.set_id_info(req);
+seq_item_port.put_response(rsp);
+```
+
+set\_id\_info()复制两项信息：sequence\_id用于把响应路由到原 Sequence；transaction\_id用于关联该 Sequence 中的具体请求，例如配合指定 transaction ID 的 get\_response()。
+
+它们是 UVM 的标识，不是 AXI 的 AWID、ARID、BID 或 RID。 两套 ID 服务于不同层次，不能混为一谈。UVM sequence item 身份信息
+
+异步 Driver 需要保存原请求的身份信息。若仍持有原对象句柄，还必须约定对象何时可以修改或复用，不能把 item\_done()当成“对象已经没人使用”的保证。
+
+## 30.6 几个最容易踩的坑
+
+只发 response 不确认 request。 使用 get\_next\_item()取得请求后，单独 put\_response()不能完成该请求握手；缺少 item\_done()，finish\_item()仍可能一直等待。
+
+上一笔未确认 就再次 get\_next\_item。 同一拉取接口上必须先完成上一笔握手。它不是允许堆积多次未确认拉取的接口。总线 outstanding 应由 Driver 内部管理，不能靠连续调用未配对的 get\_next\_item()实现。
+
+把 get 和 get\_next\_item 混用。get\_next\_item()需要随后配对 item\_done()；get()则在取出请求时已经完成相应的请求确认，不能再为同一笔调用 item\_done()。UVM 拉取接口约定
+
+以为 item\_done 会删除 transaction。 它移除的是 Sequencer 中的当前 request，并不销毁仍被其他句柄引用的 class 对象。
+
+以为未确认就会自动重传。 标准握手要求 Driver 正确确认当前请求，不能把“请求仍保留在队列里”理解为一套自动重传或超时恢复机制。UVM Sequencer 方法说明
+
+## 30.7 回到最开始的问题
+
+为什么顺序执行的多个 uvm\_do，可以用于构造 outstanding？
+
+因为顺序执行的是 UVM 层的请求交接；在支持流水处理的 Driver 中，已经交接的多笔事务仍可以在总线上并行推进。
+
+不过，仅凭“先发送、再等待”的 sequence 结构，还不能断定商业 VIP 内部一定在哪一行调用 item\_done()，也不能保证每次运行都产生 outstanding。具体行为仍受 Driver 实现和配置限制。
+
+真正值得记住的不是某种固定代码顺序，而是这三个问题：
+
+- finish\_item()什么时候返回？看当前请求何时完成 UVM 握手。
+
+- response 什么时候取得？看响应何时进入对应 Sequence 的响应通路。
+
+- 总线什么时候完成？看 Driver 与协议对完成点的约定。
+
+item\_done()中的 done，首先是 UVM 请求握手的 done。它可以与总线事务完成重合，也可以按 Driver 的流水架构与之分开。
+
+把这层关系分清，再看 VIP 的连续发包和乱序用例，就不会把“代码顺序执行”误认为“总线只能串行工作”。

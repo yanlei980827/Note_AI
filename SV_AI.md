@@ -36,6 +36,27 @@
 　　[3.14 面试问答](#314-面试问答)  
 　　[3.15 问题 3：`config_db::get` 成功却 driver 驱动不到 DUT，可能是什么原因？](#315-问题-3config_dbget-成功却-driver-驱动不到-dut可能是什么原因)  
 　　[3.16 小结](#316-小结)  
+[4. \[SystemVerilog标准分析\] 一文讲清楚SystemVerilog的调度机制](#4-systemverilog标准分析-一文讲清楚systemverilog的调度机制)  
+　　[4.1 引言](#41-引言)  
+　　[4.2 先建立心智模型：时间片与分层事件队列](#42-先建立心智模型时间片与分层事件队列)  
+　　[4.3 什么是时间片（time slot）](#43-什么是时间片time-slot)  
+　　[4.4 阻塞赋值与非阻塞赋值：一在Active，一在NBA](#44-阻塞赋值与非阻塞赋值一在active一在nba)  
+　　[4.5 核心：UVM的阻塞赋值与RTL的非阻塞赋值到底怎么竞争](#45-核心uvm的阻塞赋值与rtl的非阻塞赋值到底怎么竞争)  
+　　[4.6 先纠正一个隐蔽的认知前提](#46-先纠正一个隐蔽的认知前提)  
+　　[4.7 那么问题来了：driver 该用 `=` 还是 `<=`？](#47-那么问题来了driver-该用-还是)  
+　　[4.8 正解：用clocking block的skew消除竞争](#48-正解用clocking-block的skew消除竞争)  
+　　[4.9 clocking block 是什么](#49-clocking-block-是什么)  
+　　[4.10 加了 clocking block 之后，时序长这样](#410-加了-clocking-block-之后时序长这样)  
+　　[4.11 回到开头的四个问题，逐一作答](#411-回到开头的四个问题逐一作答)  
+　　[4.12 问题1：driver 在时钟沿用阻塞赋值驱动，DUT 能不能当前拍采到？](#412-问题1driver-在时钟沿用阻塞赋值驱动dut-能不能当前拍采到)  
+　　[4.13 问题2：UVM 的阻塞赋值和 RTL 的非阻塞赋值之间有没有竞争？](#413-问题2uvm-的阻塞赋值和-rtl-的非阻塞赋值之间有没有竞争)  
+　　[4.14 问题3：写 driver 该用 `=` 还是 `<=`？](#414-问题3写-driver-该用-还是)  
+　　[4.15 问题4：采样 DUT 输出，采到的是前一拍的值还是最新变化的值？](#415-问题4采样-dut-输出采到的是前一拍的值还是最新变化的值)  
+　　[4.16 采样 DUT 输出：input #1step 采的是“前一拍的稳定值”](#416-采样-dut-输出input-1step-采的是前一拍的稳定值)  
+　　[4.17 一个完整的教科书式最小例子](#417-一个完整的教科书式最小例子)  
+　　[4.18 总结](#418-总结)  
+　　[4.19 参考文献](#419-参考文献)  
+[5. \[SystemVerilog标准分析\] 聊聊SystemVerilog中的浮点数](#5-systemverilog标准分析-聊聊systemverilog中的浮点数)  
 
 <!-- toc-end -->
 
@@ -821,3 +842,424 @@ monitor 不驱动接口，却同样需要 vif 来采样真实信号。monitor �
 ## 3.16 小结
 
 interface 将协议信号、方向和时序规则集中定义；virtual interface 则让 UVM class 能够安全引用那个静态实例。完整链路是顶层例化并连接 interface，config\_db 下发引用，agent 将 cfg 交给 driver 与 monitor，driver 用 clocking block 驱动，monitor 用 clocking block 采样。最常见的错误不是语法，而是 vif 没有注入、注入到错误实例，或绕过 clocking block 造成竞争。
+
+---
+
+# 4. [SystemVerilog标准分析] 一文讲清楚SystemVerilog的调度机制
+
+> 来源：https://mp.weixin.qq.com/s/nBxXtdO7qISCJhoWUzG_bA
+> 作者：款款就是飞哥
+> update 2026/09/27 18 : 27
+
+【SystemVerilog标准分析】· 基于 IEEE 1800-2017（SystemVerilog LRM）
+
+## 4.1 引言
+
+做验证这一行，有些问题你未必天天遇到，但每次遇到都会让人心里“咯噔一下”。下面这几个，我问过不下十位“工作多年”的验证工程师，能一次性讲清楚的，一只手数得过来：
+
+**问题****1**：我在 driver 的run\_phase里，@(posedge clk)之后用阻塞赋值vif.sig = data往 DUT 接口上打，RTL 里always @(posedge clk) q <= sig用非阻塞赋值采样——这一拍 DUT 到底能不能采到我刚打的值？
+
+**问题****2**：UVM 环境里的阻塞赋值，和 RTL 里的非阻塞赋值，两者之间到底存不存在竞争关系？
+
+**问题****3**：写 driver 的时候，到底该用阻塞赋值=还是非阻塞赋值<=？
+
+**问题****4**：我在时钟沿采样 DUT 的输出，采到的到底是“前一拍的值”，还是“这一拍刚变化的新值”？
+
+这四个问题，看起来是四个独立的坑，其实背后是同一个东西在起作用——SystemVerilog 的**分层事件调度器（****stratified event scheduler****）**。把这套调度机制彻底搞懂，这四个问题就全解了，而且你会发现自己对“仿真器到底怎么执行代码”这件事的理解，上了一个台阶。
+
+这一篇，咱们就以 IEEE 1800-2017 的 §4.4（调度语义）和 §14（clocking block）为蓝本，用最具体的代码和波形，把“一个时钟沿上到底发生了什么”掰开揉碎讲清楚。为了让“一看波形就头疼”的读者也能跟上，我会用最少的信号、最慢的节奏来讲。
+
+## 4.2 先建立心智模型：时间片与分层事件队列
+
+## 4.3 什么是时间片（time slot）
+
+仿真器并不是把时间当成一条连续不断的河流，而是把它切成一段一段的离散刻度，每一段叫一个**time slot****（时间片）**。同一个时间片里，所有“发生在同一仿真时刻”的事件会聚在一起，按照一套固定的顺序分批次处理。你代码里那个@(posedge clk)被触发、=赋值生效、<=赋值更新、断言求值……这些动作，全都落在某个时间片的某个“小格子”里。
+
+这套“小格子”的正式名字叫**分层事件队列（****stratified event queue****）**，是 SystemVerilog 调度机制的绝对核心。IEEE 1800-2017 §4.4 把每个时间片从前往后划分成 17 个事件区域（event region），自上而下依次处理，如图1：
+
+*图**1**：一个时间片内的分层事件队列（**17**个区域，自上而下依次处理）*
+
+![](SV_AI_assets/image-0012.png)
+
+17 个区域看着吓人，但对验证工程师来说，真正每天打交道的其实只有 8 个。我把它们的职责浓缩成一句话：
+
+**Preponed**：采样点。clocking block 的#1step输入就在这儿采样，等价于“上一个时间片的 Postponed”。
+
+**Active**：干活的主力。阻塞赋值=、连续赋值、非阻塞赋值<=的**右值（****RHS****）求值**都在这里。
+
+**Inactive**：#0延迟的歇脚点。
+
+**NBA**：非阻塞赋值<=的**左值（****LHS****）更新**在这里发生。
+
+**Observed**：断言（assertion）求值，以及 clocking 事件的触发点。
+
+**Reactive / Re-NBA**：program 块和 checker 的代码；clocking block 的**输出**（无 skew 或#0）在这里驱动。
+
+**Postponed**：$monitor/$strobe的采样点，一旦到了这里，本时间片内不再允许任何信号变化。
+
+其中最关键、也最“危险”的一句话，出自 §4.4.2.2：
+
+*The Active region holds the current active region set events being evaluated and can be processed in any order.*
+
+翻译：**Active****区域里的事件，可以以任意顺序被处理。**这句话，就是后面所有“竞争（race）”问题的总根源——你永远不能假设“我的代码先跑，你的后跑”。先把它记牢，第三节会反复用到。
+
+## 4.4 阻塞赋值与非阻塞赋值：一在Active，一在NBA
+
+在聊 UVM 和 RTL 的竞争之前，得先把=和<=这两个“老熟人”的调度差异讲透。很多工程师用了一辈子<=，却未必说得清“它到底晚在哪儿”。看这段代码：
+
+*图**2**：例**1**非阻塞赋值**vs**阻塞赋值*
+
+![](SV_AI_assets/image-0013.png)
+
+两种写法，看似只差一个符号，调度行为却完全不同：
+
+**<=****（非阻塞）**：第 3 行q1 <= d的执行分两步——先在**Active****区域**读d的旧值，然后这个“更新 q1”的动作被挂到**NBA****区域**，等 Active 里所有事件都跑完才真正更新q1。所以第 4 行q2 <= q1在 Active 区域读到的q1，还是**更新前的旧值**。这正是移位寄存器能“逐拍移位”的根本原因。
+
+**=****（阻塞）**：第 9 行q1 = d在 Active 区域**立刻**把q1更新掉，第 10 行q2 = q1读到的就是**刚更新的新值**，所以没有移位效果。
+
+用波形看更直观：
+
+*图**3**：非阻塞赋值的波形**——Active**读旧值，**NBA**才更新，**q2**落后**q1**一拍*
+
+![](SV_AI_assets/image-0014.png)
+
+注意图 3 里那个绿色的 NBA 小窗口：q1的更新被推迟到了时钟沿之后的 NBA 区域，而q2在 Active 区域读q1时读到的还是旧值 0，于是q2比q1又晚了一拍。这正是 §4.4.2.4 说的：
+
+*The NBA (nonblocking assignment update) region holds the events to be evaluated after all the Inactive events are processed.*
+
+翻译：NBA 区域里的更新事件，要等 Inactive（乃至更早的 Active）全部处理完才轮到它。
+
+一句话记住：**=****在****Active****立即生效，****<=****在****NBA****才更新**。这个“NBA 才更新”的延迟，是 RTL 时序逻辑正确性的基石，但同时也是下一节“跨域竞争”的伏笔。
+
+## 4.5 核心：UVM的阻塞赋值与RTL的非阻塞赋值到底怎么竞争
+
+## 4.6 先纠正一个隐蔽的认知前提
+
+要理解这个竞争，得先破除一个几乎人人都有、却很少有人点破的误解：**UVM****的组件代码，跑在哪个事件区域？**
+
+很多人以为 UVM 环境跟program块一样跑在 Reactive 区域。其实不是。标准 UVM 环境不推荐、也基本不用program块，uvm\_test\_top是用module包起来的，run\_test()也是从 module 里调的。也就是说，**你的****driver****、****monitor****、****sequence****里的代码，统统跑在****module****的****Active****区域**，和 RTL 的always块是“同一片江湖”。
+
+这个前提一旦明确，竞争的根源就浮出水面了。看这段最常见的代码：
+
+*图**4**：例**2**无**clocking block**时，**driver**阻塞赋值**与**RTL**非阻塞读**的竞争*
+
+![](SV_AI_assets/image-0015.png)
+
+DUT 里的q <= sig在第 3 行**Active****区域**读sig的旧值；driver 里的vif.sig = data在第 10 行**Active****区域**立刻写sig。两者都被同一个posedge clk触发，**都在****Active****区域执行**。
+
+还记得第一节那句“can be processed in any order”吗？现在它咬人了：Active 区域里，driver 的写和 RTL 的读，**谁先执行完全由仿真器说了算**。这就产生了两种截然不同的结果：
+
+若**driver****先执行**：sig先被写成新值，RTL 随后读sig，读到的是**新值**，于是q这一拍就更新成新值；
+
+若**RTL****先执行**：RTL 先读到sig的**旧值**，driver 再写新值，于是q这一拍保持旧值，新值要等下一拍才被采到。
+
+*图**5**：竞争波形**——**同一时钟沿，**q**可能采到旧值也可能采到新值*
+
+![](SV_AI_assets/image-0016.png)
+
+图 5 里那个橙色的 Active 窗口，就是“竞争窗口”：q到底是 0 还是 1，全看 driver 和 RTL 谁先抢到执行权。**同一个测试、同一段代码，换个仿真器版本、换个随机种子，结果可能就不一样。**这就是最典型、也最难查的竞争（race）。
+
+## 4.7 那么问题来了：driver 该用 `=` 还是 `<=`？
+
+有人会说：那我把 driver 里的=换成<=不就行了？换成<=之后，sig的更新被推迟到 NBA 区域，而 RTL 读sig在 Active 区域，于是 RTL 一定读到旧值，竞争似乎消失了。
+
+这个观察**在技术上是成立的**，但它是一条“歪路”，不是正解。原因有三：
+
+1. **语义错位**：testbench 是过程化代码，=的“立即生效”才符合人的直觉；在 driver 里用<=，你自己回头读代码都会怀疑人生。
+2. **只解决一个方向**：它侥幸避开了“driver 写 vs RTL 读”这一个竞争点，但 TB 和 RTL 之间还有采样、比对、$display等一堆其他交互点，<=一个都救不了。
+3. **脆弱**：它依赖“TB 用<=、RTL 用<=、两者恰好错开区域”这种没人明说、随时可能被打破的约定。
+
+所以结论先放这儿：**直接写=会竞争（上一小节已证明），直接换成<=又是歪路（上面三条理由）。**真正一劳永逸的正解，是把时序约束显式地声明出来——这就是下一节的 clocking block。
+
+## 4.8 正解：用clocking block的skew消除竞争
+
+## 4.9 clocking block 是什么
+
+clocking block 是 SystemVerilog 专为 testbench 设计的“时钟时序声明”。它用一句话，把“相对某个时钟沿，输入什么时候采样、输出什么时候驱动”这件事写死在接口上，让 TB 和 DUT 之间不再靠“谁先抢到执行权”这种运气。看这段接口定义：
+
+*图**6**：例**3 clocking block**接口**+ driver**的驱动方式*
+
+![](SV_AI_assets/image-0017.png)
+
+第 6 行的default input #1step output #0是整段代码的灵魂，它声明了两件事：
+
+1. **input #1step**：采样发生在“上一个时间步的末尾”，等价于 Preponed 区域——**采到的一定是时钟沿到来前的稳定旧值**。
+2. **output #0**：驱动发生在 clocking 事件同一时刻的**Re-NBA****区域**——**比****RTL****的****Active****读和****NBA****更新都要晚**。
+
+这两条 skew 的含义，IEEE 1800-2017 §14.4 说得非常直白，我原文摘录加翻译：
+
+*An input skew of 1step indicates that the signal is to be sampled at the end of the previous time step. In other words, the value sampled is always the signal's last value immediately before the corresponding clock edge.*
+
+翻译：#1step输入 skew 意味着信号在**上一个时间步的末尾**被采样，换句话说，采到的一定是**紧挨着该时钟沿之前的最后一个值**。
+
+*Inputs with explicit #0 skew shall be sampled at the same time as their corresponding clocking event, but to avoid races, they are sampled in the Observed region. Likewise, clocking block outputs with no skew (or explicit #0 skew) shall be driven at the same time as their specified clocking event, in the Re-NBA region.*
+
+翻译：显式#0的输入在 clocking 事件同一时刻采样，但为避免竞争，它在**Observed**区域采样；同理，无 skew（或#0）的 clocking block 输出在**Re-NBA**区域驱动。
+
+还有一句特别容易被误读，一定要记牢：
+
+*Skews are declarative constructs; thus, they are semantically very different from the syntactically similar procedural delay statement. In particular, an explicit #0 skew does not suspend any process, nor does it execute or sample values in the Inactive region.*
+
+翻译：skew 是**声明性**的，跟语法相似的#0过程延迟完全是两码事。显式#0 skew 不会挂起任何进程，也不会跑到 Inactive 区域去。
+
+再补一个默认值的小知识点：§14.4 规定，**如果你不显式写****skew****，默认****input skew****是****1step****、****output skew****是****0**。不过工程上强烈建议显式写出来，免得后人读接口还要翻标准。
+
+## 4.10 加了 clocking block 之后，时序长这样
+
+现在 driver 不再直接碰 vif.sig，而是写 vif.cb.sig <= data（第 18 行）。注意这个 <= 不是普通的非阻塞赋值，而是标准专门给 clocking block 定义的同步驱动（synchronous drive）语法——IEEE 1800-2017 §14.16 的语法（Syntax 14-5）规定其形式就是 clockvar <= expression，写 clocking block 输出用的就是它。这个驱动会被 output skew 接管，最终在 Re-NBA 区域才真正驱动到 sig 线上。看波形：
+
+*图**7**：加**clocking block**后**——sig**在**Re-NBA**才驱动，**q**下一拍才变*
+
+![](SV_AI_assets/image-0018.png)
+
+图 7 里那个紫色的 Re-NBA 窗口是关键：sig的实际驱动被推迟到了 RTL 的 Active 读和 NBA 更新**之后**。于是：
+
+当前拍（t=1 沿）：RTL 在 Active 读到的还是sig的旧值，q更新为旧值；sig的新值在 Re-NBA 才上到线上；下一拍（t=2 沿）：RTL 才读到sig的新值，q才更新为新值。
+
+竞争彻底消失，行为变得**确定且可预期**：**driver****这一拍打的，****DUT****永远采不到；它会在下一拍生效。**这就是 clocking block 把“运气”变成“契约”的威力。
+
+## 4.11 回到开头的四个问题，逐一作答
+
+现在把开头那四个问题逐个收口。每一个答案都能在前文找到出处。
+
+## 4.12 问题1：driver 在时钟沿用阻塞赋值驱动，DUT 能不能当前拍采到？
+
+**取决于有没有****clocking block****。**没有 clocking block 时，driver 的=和 RTL 的<=读都在 Active 区域，谁先谁后不确定——**可能采到，也可能采不到**（图5）。加了 clocking block（output #0 → Re-NBA）后，驱动发生在 RTL 采样之后，**这一拍一定采不到，下一拍才生效**（图7）。
+
+## 4.13 问题2：UVM 的阻塞赋值和 RTL 的非阻塞赋值之间有没有竞争？
+
+**有，而且这是最典型的一类竞争。**根源是两者都在 Active 区域、且 Active 区域 “can be processed in any order”。它不是“会不会有”的问题，而是“只要不隔离就一定会有”的问题。隔离手段就是 clocking block 的 skew。
+
+## 4.14 问题3：写 driver 该用 `=` 还是 `<=`？
+
+分两层说。 没有 clocking block 时：直接 vif.sig = data 会跟 RTL 竞争（图5），换成直接 vif.sig <= data 又是歪路（前面三条理由）。加了 clocking block 之后：驱动语法被固定成 <=，也就是 vif.cb.sig <= data。但一定分清——这里的 <= 是 §14.16 的同步驱动（synchronous drive），跟 RTL 里那个非阻塞赋值 <= 是两码事，真正的时序完全由 output skew 决定。记住一句话：别裸碰 vif.sig；经 clocking block 用同步驱动 <=，时序交给 skew。
+
+## 4.15 问题4：采样 DUT 输出，采到的是前一拍的值还是最新变化的值？
+
+**没有****clocking block****直接****@(posedge clk)****采样，是竞争，两个都可能；用****clocking block****的****input****#1step****采样，采到的是****“****前一拍的稳定值****”****。**这个下一节展开讲。
+
+## 4.16 采样 DUT 输出：input #1step 采的是“前一拍的稳定值”
+
+采样输出是验证里最频繁的动作，也是最容易“采到毛刺/采错拍”的地方。看这段对比：
+
+*图**8**：例**4 monitor**的正确采样**vs**反例*
+
+![](SV_AI_assets/image-0019.png)
+
+第 10 行的反例里，always @(posedge clk)之后直接读vif.q，会跟 RTL 里q的 NBA 更新**竞争**——你读到的可能是更新前的旧值，也可能是更新后的新值，取决于 Active/NBA 的相对顺序。这不稳定，scoreboard 会莫名其妙地时对时错。
+
+正确的做法是第 5 行：用 clocking block 的@(vif.cb)采样vif.cb.q。因为 input skew 是#1step，采样发生在 Preponed 区域，等价于“上一个时间片的 Postponed”，所以**采到的一定是时钟沿到来前已经稳定下来的旧值**。波形上看得最清楚：
+
+*图**9**：**input #1step**采样**——monitor**采到的是前一拍的稳定值*
+
+![](SV_AI_assets/image-0020.png)
+
+图 9 里q在 NBA 区域（时钟沿之后）才更新，而cb.q在 Preponed 区域（时钟沿之前）就采好了，所以 monitor 拿到的cb.q永远是“上一个周期稳定下来的值”，不存在竞争。
+
+这里还有个特别隐蔽的坑，IEEE 1800-2017 §14.4 的 NOTE 专门警告过：
+
+*A clocking block does not eliminate potential races when an event control outside a program block is sensitive to the same clock as the clocking block and a statement after the event control attempts to read a member of the clocking block. The race is between reading the old sampled value and the new sampled value.*
+
+翻译：如果**在****clocking block****之外**（比如普通always/initial里）用@(posedge clk)这种和 clocking 块同频的事件控制，然后又去读 clocking block 的成员，那么竞争依然存在——你读到的到底是“旧的采样值”还是“新的采样值”，不确定。
+
+换句话说，**光有****clocking block****还不够，你还得****“****从****clocking block****内部****”****去采样它**——用@(vif.cb)触发的vif.cb.q，而不是在普通@(posedge clk)里读vif.cb.q。这也顺带解释了一个经典问题：为什么标准写法是always @(vif.cb)，而不是always @(posedge clk) $display(vif.cb.q)——前者确定采到更新后的采样值，后者是竞争。
+
+## 4.17 一个完整的教科书式最小例子
+
+把前面所有要点串起来，给一个可以直接抄进项目的完整最小例子：
+
+*图**10**：例**5**完整示例**——interface + clocking block + driver + monitor*
+
+![](SV_AI_assets/image-0021.png)
+
+这个例子里有四个“教科书式”的细节，值得一条条对照：
+
+**driver****用****=****经****vif.cb.sig****驱动**（第 19 行）：语义自然，且被 output skew 接管，DUT 下一拍才看到；
+
+**monitor****用****@(vif.cb)****采样**（第 29 行）：采到前一拍的稳定值，无竞争；
+
+**interface****里显式写****default input #1step output #0**（第 6 行）：把采样/驱动时序声明在接口上，一劳永逸；
+
+**driver/monitor****都用****modport tb****的****virtual interface**（第 13、25 行）：从源头上保证 TB 只能通过 clocking block 访问信号，想“裸碰” vif.sig都碰不到。
+
+## 4.18 总结
+
+这一篇把 SystemVerilog 调度机制的骨架、以及它跟验证最相关的那部分讲完了。核心结论就这几条：
+
+1. 仿真时间被切成一个个 time slot，每个 slot 内部是 17 个区域的有序队列，自上而下处理。
+2. =在 Active 立即生效，<=在 NBA 才更新——这是 RTL 时序正确性的基石。
+3. Active 区域 “can be processed in any order”，是所有 TB/RTL 竞争的根源。
+4. UVM 组件跑在 module 的 Active 区域（不是 program），所以 driver 的=和 RTL 的<=读会在同一区域竞争——**DUT****这一拍能否采到****driver****的值，不确定。**
+5. clocking block 的 input #1step（Preponed 采样）和 output #0（Re-NBA 驱动）把时序“锁死”：driver 这一拍打的，DUT 下一拍才采到；monitor 采到的，是前一拍的稳定值。
+6. 写 driver 别裸碰 vif.sig；正确姿势是经 clocking block 用同步驱动 <=（vif.cb.sig <= data）——这个 <= 是 clocking\_drive 语法而非普通非阻塞赋值，时序交给 skew。
+7. 采样输出要用@(vif.cb) + input #1step，而不是裸@(posedge clk)。
+
+下一篇，咱们顺着调度器这条线再往里走一层，聊聊program块到底把“竞争”隔离到了什么程度、以及为什么现代 UVM 反而不怎么用program了——这背后又是另一个被误解多年的点，敬请期待。
+
+## 4.19 参考文献
+
+IEEE Std 1800-2017, IEEE Standard for SystemVerilog—Unified Hardware Design, Specification, and Verification Language. §4.4 Scheduling semantics；§14 Clocking blocks（含 §14.16 Synchronous drives）.
+
+---
+
+# 5. [SystemVerilog标准分析] 聊聊SystemVerilog中的浮点数
+
+> 来源：https://mp.weixin.qq.com/s/7hm4dLJaelmRSP-SXux67w
+> 作者：款款就是飞哥
+> update 2026/09/27 18 : 44
+
+【SystemVerilog标准分析】· 基于 IEEE 1800-2017 标准
+
+**引言**
+
+在「SystemVerilog标准分析」这个专题下，我们之前聊过进程调度、聊过线网驱动强度，都是围绕SystemVerilog 语言标准里那些“平时用得着、但底层语义容易被忽略”的细节展开。今天我们把目光转向另一个同样容易让人“一知半解”的数据类型——浮点数。
+
+很多工程师对浮点数的印象停留在“real 是双精度、shortreal 是单精度”这种结论层面，但真要问一句：一个 1.5，在 shortreal 里存成什么、在 real 里又存成什么？为什么 0.1 存进去再打印出来会有误差，而 0.5 和 0.25 就没有？负数跟正数在 bit 层面到底差在哪？——能答得清楚的人就不多了。
+
+这篇文章，我们就从 SystemVerilog 标准出发，把浮点类型的定义、分类，以及“正数、负数、小数在单/双精度浮点里究竟表示成多少”这件事，掰开揉碎讲清楚。
+
+**一、****SystemVerilog****浮点类型的定义与分类**
+
+SystemVerilog 标准（IEEE 1800-2017）在 §6.12 专门定义了三个浮点相关的数据类型：real、shortreal和realtime。标准原文的大意如下：
+
+*The real data type is the same as a C double. The shortreal data type is the same as a C float. The realtime declarations shall be treated synonymously with real declarations and can be used interchangeably.*
+
+翻译过来就是：real 等价于 C 语言的 double（双精度浮点），shortreal 等价于 C 语言的 float（单精度浮点），而 realtime 与 real 完全同义、可以互换使用（realtime 只是给“时间/延时计算”这种场景一个语义更明确的名字）。补充一点历史背景：real和realtime 在Verilog 时代就已经存在，shortreal则是SystemVerilog 新引入的类型。三者汇总如下：
+
+|  |  |  |  |  |
+| --- | --- | --- | --- | --- |
+| **类型** | **等价****C****类型** | **位宽** | **精度** | **说明** |
+| real | double | 64 bit | 双精度 | 通用浮点类型 |
+| shortreal | float | 32 bit | 单精度 | 省空间、仿真更快 |
+| realtime | double | 64 bit | 双精度 | 与 real 完全同义 |
+
+这里要特别强调一点：这三个浮点类型只能作为变量（variable）声明，不能作为线网（net/wire）的数据类型，绝大多数综合工具也不支持浮点综合。它们和integer 这类整型是两套完全独立的体系，不要混淆。
+
+**二、****IEEE 754****浮点的内部表示**
+
+real 和shortreal 内部都遵循IEEE 754 浮点标准。标准§6.12 的脚注12 明确写道：
+
+*The real and shortreal types are represented as described by IEEE Std 754.*
+
+（译：real 与 shortreal 类型按 IEEE Std 754 描述的方式表示。）一个浮点数由三部分组成：
+
+- 符号位S（Sign）：1 bit，0 表示正、1 表示负；
+- 指数E（Exponent）：单精度 8 bit、双精度 11 bit，存储时加了偏移量（bias）；
+- 尾数M（Fraction/Mantissa）：单精度 23 bit、双精度 52 bit，隐含了整数部分的 1。
+
+位宽分配如下：
+
+|  |  |  |  |  |  |
+| --- | --- | --- | --- | --- | --- |
+| **类型** | **符号位** | **指数位** | **尾数位** | **总位宽** | **偏置****bias** |
+| shortreal（单精度） | 1 | 8 | 23 | 32 | 127 |
+| real（双精度） | 1 | 11 | 52 | 64 | 1023 |
+
+对于规格化数（normalized），其真实值由下面的公式给出：
+
+*value = (-1)^S × 1.M × 2^(E - bias)*
+
+其中 1.M 表示“整数 1 后面接小数点再接尾数 M”。也就是说，整数位隐含为 1、只有小数部分真正存下来。这个“隐含的 1”是关键所在：它让同样的位数凭空多出了一位有效精度。
+
+**三、正数、负数、小数具体怎么表示**
+
+理解了上面的三段式，我们就可以手工算出任意一个具体数值的bit 表示了。SystemVerilog还贴心地提供了四个系统函数，让我们能在仿真里直接把浮点数的 bit 掏出来看：
+
+*$realtobits(r) / $bitstoreal(b) —— real**（**64**位）与**64**位向量的互转* *$shortrealtobits(s) / $bitstoshortreal(b) —— shortreal**（**32**位）与**32**位向量的互转*
+
+这四个函数在 IEEE 1800-2017 的转换函数章节（§20.5）中定义。下面这段代码，打印出几个典型数值在real 和shortreal 下的bit 表示：
+
+module tb;
+  initial begin
+    real      r;
+    shortreal s;
+    r = 1.5;   s = 1.5;
+   $display("real      1.5 = %h", $realtobits(r));
+   $display("shortreal 1.5 = %h", $shortrealtobits(s));
+   $display("real      0.1 = %h", $realtobits(0.1));
+   $display("shortreal 0.1 = %h", $shortrealtobits(0.1));
+  end
+endmodule
+
+我们以 1.5 为例手工拆解一遍（先看单精度 shortreal）。1.5 的二进制是 1.1b（即 1 + 0.5），写成“1.M × 2^E”的形式就是 1.1b × 2^0，于是：
+
+· 符号位S = 0（正数）；
+
+· 实际指数为0，存储时加偏置127，E = 127 = 0111\_1111b；
+
+· 尾数M = 0.1b，也就是最高位bit22 为1、其余全0。
+
+拼起来就是0\_01111111\_10000000000000000000000 = 0x3FC00000，与仿真打印结果一致。
+
+再看几个典型值，正数、负数、小数的 32 位与 64 位表示汇总如下：
+
+|  |  |  |
+| --- | --- | --- |
+| **数值** | **shortreal****（****32****位）** | **real****（****64****位）** |
+| 0.0 | 0x00000000 | 0x0000000000000000 |
+| -0.0 | 0x80000000 | 0x8000000000000000 |
+| 1.0 | 0x3F800000 | 0x3FF0000000000000 |
+| -1.0 | 0xBF800000 | 0xBFF0000000000000 |
+| 0.5 | 0x3F000000 | 0x3FE0000000000000 |
+| 1.5 | 0x3FC00000 | 0x3FF8000000000000 |
+| 0.25 | 0x3E800000 | 0x3FD0000000000000 |
+| 100.0 | 0x42C80000 | 0x4059000000000000 |
+| 0.1 | 0x3DCCCCCD | 0x3FB999999999999A |
+
+从这张表可以直观看出几个规律：
+
+1. 正负数只在符号位不同。1.0是0x3F800000，-1.0是0xBF800000，差别仅仅是最高位符号位从0 变1，其余完全一样。这是浮点表示最“优雅”的地方——取反在 bit 层面就是翻转最高位。
+
+2. 0.5、0.25这类“2的负整数次幂”存得干干净净。0.5 = 2^-1、0.25 = 2^-2，尾数全是 0，只靠指数位（单精度分别是126、125）就精确表示。
+
+3. 1.5、100.0这类“尾数非 0”的数，需要同时动用指数位和尾数位。以 100.0 为例：100 = 1.5625 × 2^6，所以尾数存 0.5625、实际指数 6（单精度存 6+127=133）。
+
+**四、为什么****0.1****存不精确**
+
+表格里最“刺眼”的，是 0.1 那一行：0.1 在 shortreal 里存成 0x3DCCCCCD，在 real 里存成0x3FB999999999999A，尾巴上拖着长长一串不整齐的数字。
+
+根本原因是：0.1 在二进制里是一个无限循环小数。十进制 0.1 转二进制是 0.0001100110011...（“1100”无限循环）。而 IEEE 754 的尾数位数是有限的（单精度 23 位、双精度52 位），装不下无限位，只能截断后舍入。于是：
+
+· shortreal 里存的 0.1，实际值是0.100000001490116119384765625（比 0.1 大一点）；
+
+· real 里存的0.1，实际值是0.1000000000000000055511151231257827（比 0.1 大一点点）。
+
+这就是为什么我们用 $display 打印 0.1 时，单精度下会看到 0.100000001 这种“尾巴”，而 0.5、0.25 却永远精确——因为后者是2 的负整数次幂，二进制下是有限小数。
+
+这个特性直接引出一条工程上的重要结论：浮点数不要用== 做相等比较。两个看起来“相等”的浮点数，在 bit 层面可能相差一个 ulp（unit in the last place，最末位）。正确做法是判断两者差的绝对值是否小于某个阈值epsilon。
+
+**五、特殊值与边界**
+
+除了上面这些“普通数”，IEEE 754 还定义了几类特殊值：正负零、正负无穷、NaN、非规格化数。这里要特别交代一句：IEEE 1800-2017 标准对 real/shortreal 的内部表示只做了两处承诺——§6.12 脚注12 说“real与shortreal 按IEEE Std 754 描述的方式表示”，§20.5 注 1 说这些转换函数“应遵循 IEEE 754 单精度与双精度浮点表示”。标准本身并没有逐个列出 NaN、无穷这些特殊值，下面这些 bit 模式与性质都来自 IEEE 754 的定义；只是因为 real/shortreal 承诺遵循 IEEE 754，它们在 SystemVerilog 里同样成立：
+
+1. ±0.0：符号位可以不同。+0.0是0x00000000、-0.0是0x80000000（单精度）。二者数值相等，但bit 不同，这就是浮点特有的“正零/负零”现象。
+
+2. 无穷大±Infinity：指数位全1、尾数位全0。单精度正无穷是0x7F800000、负无穷是0xFF800000；双精度正无穷是0x7FF0000000000000。浮点除法除以0 就会得到无穷。
+
+3. NaN（Not a Number）：指数位全1、尾数位非0（如单精度0x7FC00000）。0.0/0.0这类未定义运算会得到NaN。NaN有个“脾气”：它跟任何数（包括它自己）都不相等——这是 IEEE 754 的规定，所以判断一个数是不是 NaN 时不能简单地用 ==（因为 NaN == NaN 恒为 false）。工程上常用的做法是利用“x != x”这一 IEEE 754 特性来判定，或者用 $realtobits 把 bit 取出来与 0x7FC00000 这类模式比对。这里要特别提醒：IEEE 1800-2017 标准并没有提供 $isnan()、$isinf() 这类内建函数——§20.8 的数学函数只有$ln、$log10、$exp、$sqrt、$pow、$floor、$ceil、$sin、$cos、$tan、$asin、$acos、$atan、$atan2、$hypot、$sinh、$cosh、$tanh、$asinh、$acosh、$atanh 这 20 个常规函数，不含任何专门判断NaN/无穷的函数。
+
+4. 非规格化数（Denormal/Subnormal）：指数位全 0、尾数位非 0。它是为了表示比“最小规格化数”更接近 0 的那段极小数而存在的（此时不再隐含整数 1，而是 0.M）。比如单精度下 1e-38 已经落进非规格化区间（0x006CE3EE）。
+
+最后给一下各自的范围，做到心里有数：
+
+|  |  |  |  |
+| --- | --- | --- | --- |
+| **类型** | **最小值（规格化）** | **最大值** | **有效十进制位数** |
+| shortreal（单精度） | 约 ±1.175494e-38 | 约 ±3.402823e38 | 约 7 位 |
+| real（双精度） | 约 ±2.225074e-308 | 约 ±1.797693e308 | 约 15~16 位 |
+
+**六、总结**
+
+把今天的要点串一下：
+
+1. SystemVerilog 的浮点类型就三个：real（64位双精度，等价C double）、shortreal（32 位单精度，等价 C float）、realtime（与 real 完全同义）。三者都遵循 IEEE 754，都只能作变量、不可综合。
+
+2. 一个浮点数= 符号位+ 指数位（加偏置）+尾数位（隐含整数1），规格化数的真值是(-1)^S × 1.M × 2^(E-bias)。单精度偏置 127、双精度偏置1023。
+
+3. 正负数在bit 层面只差一个符号位；0.5、0.25 这类 2 的负整数次幂能精确表示（尾数全 0），而0.1 因二进制无限循环只能截断近似——这是浮点误差的根源。
+
+4. 想亲眼看到浮点的bit 表示，用$realtobits / $shortrealtobits（反向是 $bitstoreal / $bitstoshortreal）。
+
+5. 工程上要记住三条：浮点比较用误差阈值而不是 ==；判断NaN 没有现成的$isnan() 可用（IEEE 1800-2017 未提供），可利用“x != x”或比对$realtobits 的bit 模式；对精度要求高就选real 而非shortreal。
+
+浮点这个话题在 SystemVerilog 里其实还有“舍入模式（rounding）”、“$cast 截断与四舍五入的区别”等衍生问题，后续有机会我们再专门展开，敬请期待。

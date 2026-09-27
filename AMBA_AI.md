@@ -41,15 +41,11 @@
 　　[3.12 验证环境怎么写，最不容易绕晕](#312-验证环境怎么写最不容易绕晕)  
 　　[3.13 最后，把这件事压缩成一句话](#313-最后把这件事压缩成一句话)  
 　　[3.14 资料出处](#314-资料出处)  
-[4. PCIe LTSSM：从一对差分线到可靠链路](#4-pcie-ltssm从一对差分线到可靠链路)  
-　　[4.1 为什么不能接上差分线就开始发包？](#41-为什么不能接上差分线就开始发包)  
-　　[4.2 Detect：先确认对面是否有接收器](#42-detect先确认对面是否有接收器)  
-　　[4.3 Polling：用已知序列建立可验证的交流](#43-polling用已知序列建立可验证的交流)  
-　　[4.4 Configuration：把多条 Lane 组织成一条 Link](#44-configuration把多条-lane-组织成一条-link)  
-　　[4.5 Recovery：速率变了，就要重新验证链路](#45-recovery速率变了就要重新验证链路)  
-　　[4.6 均衡：让接收端告诉对面，怎样发更容易收](#46-均衡让接收端告诉对面怎样发更容易收)  
-　　[4.7 L0 之外：节能、测试和复位各有目的](#47-l0-之外节能测试和复位各有目的)  
-　　[4.8 真正有用的调试问题：哪项退出条件没满足？](#48-真正有用的调试问题哪项退出条件没满足)  
+[4. Synopsys AXI VIP 读交织配置](#4-synopsys-axi-vip-读交织配置)  
+　　[4.1 设置端口配置](#41-设置端口配置)  
+　　[4.2 设置每笔读响应](#42-设置每笔读响应)  
+　　[4.3 用数组指定分块方式](#43-用数组指定分块方式)  
+　　[4.4 配好以后检查这几件事](#44-配好以后检查这几件事)  
 
 <!-- toc-end -->
 
@@ -876,3 +872,71 @@ scoreboard 或 memory model 最好把“transfer 地址”“合法 lane 窗口�
 ---
 
 
+# 4. Synopsys AXI VIP 读交织配置
+
+> 来源：https://mp.weixin.qq.com/s/z7sDRt9N3cbGeNqAc0fPAg
+> 作者：基米
+> update 2026/09/27 18 : 50
+
+想让不同 RID 的读数据交织返回，需要同时设置端口配置和每笔 response 的交织属性。下面以两笔不同 ID、各 8 beat 的读事务为例，给出配置参考。
+
+## 4.1 设置端口配置
+
+在 agent 使用 cfg 之前完成配置。这里假设对应的 master 和 active slave 配置对象已经创建。
+
+```
+cfg.master_cfg[0].num_outstanding_xact = 2;
+cfg.slave_cfg[0].num_outstanding_xact= 2;cfg.slave_cfg[0].read_data_reordering_depth = 2;cfg.slave_cfg[0].read_data_interleave_size= 1;cfg.slave_cfg[0].reordering_algorithm =                      svt_axi_port_configuration::ROUND_ROBIN;cfg.slave_cfg[0].default_arready = 1;cfg.master_cfg[0].default_rready = 1;这组配置为两笔事务留出并发容量和读响应
+```
+
+重排序空间，并允许读交织。read\_data\_interleave\_size 取 1，避免附加多 beat 连续粒度限制；取 0 则禁止交织。具体分块在 response 中设置。
+
+ROUND\_ROBIN 选择轮转调度；两个 default READY 设置用于简化握手。它们均不保证最终 RID 严格交替，实际 READY 还可能受到事务级延迟设置影响。
+
+## 4.2 设置每笔读响应
+
+在 slave response sequence 的 READ 分支中，用以下内容替换原有响应随机化调用。req\_resp 必须对应一笔 8-beat 读事务；A、B 两笔响应都要执行。
+
+```
+status = req_resp.randomize() with {
+  enable_interleave== 1;  interleave_pattern==        svt_axi_slave_transaction::RANDOM_BLOCK;  random_interleave_array.size()== 8;  foreach(random_interleave_array[i]) {      random_interleave_array[i]== 1;  }  foreach(rresp[i]) {      rresp[i]== svt_axi_slave_transaction::OKAY;  }};if (!status)    `uvm_fatal("RD_INTERLEAVE","Response randomize failed")
+```
+
+## 4.3 用数组指定分块方式
+
+enable\_interleave 打开当前事务的交织功能；interleave\_pattern 选择 RANDOM\_BLOCK 模式；random\_interleave\_array 描述每个块的 beat 数。数组长度是块数，不是 RID 数。
+
+| 8 beat 的分块数组 | 含义 |
+| --- | --- |
+| {1, 1, 1, 1, 1, 1, 1, 1} | 分成 8 块，每块 1 beat |
+| {2, 2, 2, 2} | 分成 4 块，每块 2 beat |
+| {2, 1, 3, 2} | 分成 4 个不等长块 |
+
+ 
+
+例如想改成每块 2 beat，只需要把上一段约束中的数组长度改成 4，每个元素改成 2：
+
+```
+random_interleave_array.size() == 4;
+foreach (random_interleave_array[i]) {  random_interleave_array[i]== 2;}
+```
+
+此时端口的 read\_data\_interleave\_size 仍取 1。允许单 beat 粒度，不等于强制每 beat 切换；当前事务可以选择更大的块。不要把数组理解为全局 RID 调度顺序。
+
+## 4.4 配好以后检查这几件事
+
+1. 两笔读事务使用不同 ARID，例如 1 和 2；每笔 8 beat，对应总线 ARLEN=7。
+2. 第二笔 AR 在第一笔最终 R 响应前握手，且两笔 response 能及时交给 driver 调度。仅设置 outstanding 容量不代表实际已有并发。
+3. 保留原例程的数据填充与事务提交流程，不要在上述配置后再次随机化覆盖结果。
+4. 自行指定数组时，让正整数块长之和等于实际 beat 总数。非法组合由本版约束和检查决定，不能依赖 VIP 自动截断。
+5. 在 RVALID && RREADY 的采样点观察 RID 和 RLAST：A 尚未结束时穿插 B 的数据，才算读交织。
+
+示例属于配置参考，需核对所用 VIP 版本的字段、枚举作用域和约束，并在本地仿真确认；不保证仅凭这些设置就得到严格 A/B/A/B 的返回顺序。
+
+参考资料
+
+Synopsys AXI VIP 交织配置示例
+
+端口参数与波形参考
+
+版本细节以当前安装的 Synopsys SVT AXI VIP HTML Class Reference 为准。
